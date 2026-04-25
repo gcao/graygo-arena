@@ -42,3 +42,7 @@ Read these files before planning or implementation work:
 Current focus: Phase 1, Deterministic Engine & Rule Fixtures.
 
 Phase 1 must establish the pure deterministic engine and tests before any orchestration, API, UI, or provider work.
+
+## IMPORTANT
+
+Do not use codex_apps, Apps connectors, or app MCP tools unless explicitly requested. Prefer local filesystem, git CLI, and normal shell tools.
