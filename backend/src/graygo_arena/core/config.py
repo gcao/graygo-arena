@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
 
-type OpenAIAuthSource = Literal["api_key", "codex_token", "none"]
+type OpenAIAuthSource = Literal["api_key", "codex_api_key", "none"]
 type OpenAIReasoningEffort = Literal["none", "minimal", "low", "medium", "high", "xhigh"]
 
 OPENAI_REASONING_EFFORTS: frozenset[str] = frozenset(
@@ -20,6 +20,7 @@ class Settings:
     database_path: Path = Path(".runtime/graygo.db")
     openai_auth_token: str | None = None
     openai_auth_source: OpenAIAuthSource = "none"
+    openai_auth_error: str | None = None
     openai_model: str = "gpt-5.1-codex-max"
     openai_reasoning_effort: OpenAIReasoningEffort = "medium"
     openai_max_output_tokens: int = 2048
@@ -29,12 +30,13 @@ class Settings:
 
 def load_settings() -> Settings:
     values = _environment_values()
-    openai_token, openai_source = _openai_auth(values)
+    openai_token, openai_source, openai_error = _openai_auth(values)
     database_path = Path(values.get("GRAYGO_DATABASE_PATH", ".runtime/graygo.db"))
     return Settings(
         database_path=database_path,
         openai_auth_token=openai_token,
         openai_auth_source=openai_source,
+        openai_auth_error=openai_error,
         openai_model=values.get("OPENAI_MODEL", "gpt-5.1-codex-max"),
         openai_reasoning_effort=_openai_reasoning_effort(
             values.get("OPENAI_REASONING_EFFORT", "medium")
@@ -99,16 +101,38 @@ def _clean_env_value(value: str) -> str:
     return cleaned
 
 
-def _openai_auth(values: dict[str, str]) -> tuple[str | None, OpenAIAuthSource]:
+def _openai_auth(values: dict[str, str]) -> tuple[str | None, OpenAIAuthSource, str | None]:
     api_key = _non_empty(values.get("OPENAI_API_KEY"))
     if api_key is not None:
-        return api_key, "api_key"
-    codex_token = _non_empty(values.get("OPENAI_CODEX_TOKEN")) or _non_empty(
+        return api_key, "api_key", None
+    codex_api_key = _non_empty(values.get("OPENAI_CODEX_API_KEY"))
+    if codex_api_key is not None:
+        return codex_api_key, "codex_api_key", None
+    legacy_codex_value = _non_empty(values.get("OPENAI_CODEX_TOKEN")) or _non_empty(
         values.get("CODEX_TOKEN")
     )
-    if codex_token is not None:
-        return codex_token, "codex_token"
-    return None, "none"
+    if legacy_codex_value is None:
+        return None, "none", None
+    if legacy_codex_value.startswith("sk-"):
+        return legacy_codex_value, "codex_api_key", None
+    if legacy_codex_value.startswith("eyJ"):
+        return (
+            None,
+            "none",
+            (
+                "OPENAI_CODEX_TOKEN/CODEX_TOKEN looks like a Codex or ChatGPT OAuth access "
+                "token. The Responses API requires an API key with api.responses.write scope. "
+                "Use OPENAI_API_KEY or OPENAI_CODEX_API_KEY with an sk-... key."
+            ),
+        )
+    return (
+        None,
+        "none",
+        (
+            "OPENAI_CODEX_TOKEN/CODEX_TOKEN is not an API-key-shaped value. "
+            "Use OPENAI_API_KEY or OPENAI_CODEX_API_KEY with an sk-... key."
+        ),
+    )
 
 
 def _openai_reasoning_effort(value: str) -> OpenAIReasoningEffort:

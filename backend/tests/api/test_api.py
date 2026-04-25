@@ -84,8 +84,8 @@ def test_step_reports_provider_auth_failure_without_500(tmp_path: Path) -> None:
     repository = SQLiteRepository(SQLiteDatabase(tmp_path / "api.db"))
     providers = ProviderCatalog(
         settings=Settings(
-            openai_auth_token="codex-test-token",
-            openai_auth_source="codex_token",
+            openai_auth_token="sk-codex-test",
+            openai_auth_source="codex_api_key",
             openai_model="gpt-5.5",
         ),
         http_client=httpx.Client(transport=httpx.MockTransport(handler)),
@@ -115,6 +115,6 @@ def test_step_reports_provider_auth_failure_without_500(tmp_path: Path) -> None:
 
     assert step_response.status_code == 502
     assert "OpenAI authentication failed (401)" in step_response.json()["detail"]
-    assert "codex-test-token" not in step_response.text
+    assert "sk-codex-test" not in step_response.text
     assert provider_test.status_code == 200
     assert provider_test.json()["ok"] is False

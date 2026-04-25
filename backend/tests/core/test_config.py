@@ -5,7 +5,7 @@ import pytest
 from graygo_arena.core.config import load_settings
 
 
-def test_load_settings_reads_root_env_file_and_codex_token(
+def test_load_settings_reads_root_env_file_and_codex_api_key(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -13,7 +13,7 @@ def test_load_settings_reads_root_env_file_and_codex_token(
     env_file.write_text(
         "\n".join(
             (
-                "OPENAI_CODEX_TOKEN=codex-token",
+                "OPENAI_CODEX_API_KEY=sk-codex-test",
                 "OPENAI_MODEL=gpt-5.1-codex-max",
                 "OPENAI_REASONING_EFFORT=xhigh",
                 "OPENAI_MAX_OUTPUT_TOKENS=4096",
@@ -23,24 +23,43 @@ def test_load_settings_reads_root_env_file_and_codex_token(
     )
     monkeypatch.setenv("GRAYGO_ENV_FILE", str(env_file))
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_CODEX_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_CODEX_TOKEN", raising=False)
     monkeypatch.delenv("CODEX_TOKEN", raising=False)
 
     settings = load_settings()
 
-    assert settings.openai_auth_token == "codex-token"
-    assert settings.openai_auth_source == "codex_token"
+    assert settings.openai_auth_token == "sk-codex-test"
+    assert settings.openai_auth_source == "codex_api_key"
+    assert settings.openai_auth_error is None
     assert settings.openai_model == "gpt-5.1-codex-max"
     assert settings.openai_reasoning_effort == "xhigh"
     assert settings.openai_max_output_tokens == 4096
 
 
-def test_load_settings_prefers_openai_api_key_over_codex_token(
+def test_load_settings_rejects_codex_oauth_access_token(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     env_file = tmp_path / ".env"
-    env_file.write_text("OPENAI_CODEX_TOKEN=codex-token\n", encoding="utf-8")
+    env_file.write_text("OPENAI_CODEX_TOKEN=eyJ.codex.oauth\n", encoding="utf-8")
+    monkeypatch.setenv("GRAYGO_ENV_FILE", str(env_file))
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_CODEX_API_KEY", raising=False)
+
+    settings = load_settings()
+
+    assert settings.openai_auth_token is None
+    assert settings.openai_auth_error is not None
+    assert "OAuth access token" in settings.openai_auth_error
+
+
+def test_load_settings_prefers_openai_api_key_over_codex_api_key(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("OPENAI_CODEX_API_KEY=sk-codex-test\n", encoding="utf-8")
     monkeypatch.setenv("GRAYGO_ENV_FILE", str(env_file))
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
 

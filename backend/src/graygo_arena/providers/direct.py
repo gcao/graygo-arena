@@ -55,7 +55,7 @@ class OpenAIResponsesProvider:
     def request_move(self, request: ProviderMoveRequest, seat: SeatSession) -> ProviderMoveResponse:
         if not self._auth_token:
             raise ProviderCredentialError(
-                "OPENAI_API_KEY, OPENAI_CODEX_TOKEN, or CODEX_TOKEN is not configured"
+                "OPENAI_API_KEY or OPENAI_CODEX_API_KEY is not configured"
             )
         payload: dict[str, object] = {
             "model": seat.model or self._default_model,

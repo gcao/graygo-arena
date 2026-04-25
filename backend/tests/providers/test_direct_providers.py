@@ -56,7 +56,7 @@ def test_openai_adapter_uses_responses_json_schema_and_parses_output() -> None:
         )
 
     provider = OpenAIResponsesProvider(
-        auth_token="codex-test-token",
+        auth_token="sk-codex-test",
         default_model="gpt-5.1-codex-max",
         reasoning_effort="xhigh",
         max_output_tokens=4096,
@@ -75,7 +75,7 @@ def test_openai_adapter_uses_responses_json_schema_and_parses_output() -> None:
     text_format = text_dict["format"]
     assert isinstance(text_format, dict)
     format_dict = cast(dict[str, object], text_format)
-    assert captured["authorization"] == "Bearer codex-test-token"
+    assert captured["authorization"] == "Bearer sk-codex-test"
     assert payload_dict["model"] == "model_from_seat"
     assert payload_dict["reasoning"] == {"effort": "xhigh"}
     assert payload_dict["max_output_tokens"] == 4096
@@ -129,8 +129,8 @@ def test_anthropic_adapter_uses_messages_tool_choice_and_parses_tool_use() -> No
 
 def test_provider_catalog_exposes_real_aliases_without_secret_values() -> None:
     settings = Settings(
-        openai_auth_token="codex-test-token",
-        openai_auth_source="codex_token",
+        openai_auth_token="sk-codex-test",
+        openai_auth_source="codex_api_key",
         openai_model="gpt-5.1-codex-max",
         openai_reasoning_effort="high",
         anthropic_api_key="sk-ant-test",
@@ -141,9 +141,9 @@ def test_provider_catalog_exposes_real_aliases_without_secret_values() -> None:
     by_id = {provider.id: provider for provider in providers}
 
     assert by_id["openai_default"].configured is True
-    assert by_id["openai_default"].auth_type == "codex"
+    assert by_id["openai_default"].auth_type == "codex_api_key"
     assert by_id["anthropic_default"].configured is True
-    assert "codex-test-token" not in repr(providers)
+    assert "sk-codex-test" not in repr(providers)
     assert "sk-ant-test" not in repr(providers)
 
 

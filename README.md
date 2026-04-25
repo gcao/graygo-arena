@@ -33,18 +33,20 @@ OPENAI_REASONING_EFFORT=high
 OPENAI_MAX_OUTPUT_TOKENS=4096
 ```
 
-Codex-token setup:
+Codex CLI API-key setup:
 
 ```sh
-OPENAI_CODEX_TOKEN=...
+OPENAI_CODEX_API_KEY=sk-...
 OPENAI_MODEL=gpt-5.1-codex-max
 OPENAI_REASONING_EFFORT=xhigh
 OPENAI_MAX_OUTPUT_TOKENS=4096
 ```
 
-`OPENAI_API_KEY` takes precedence over `OPENAI_CODEX_TOKEN`. `CODEX_TOKEN` is also accepted as a fallback alias.
+`OPENAI_API_KEY` takes precedence over `OPENAI_CODEX_API_KEY`.
 
-To get a local Codex token after signing in with Codex CLI, run:
+Do not paste `tokens.access_token` from `~/.codex/auth.json`; that is a Codex/ChatGPT OAuth access token, not a Responses API key, and the API will reject it with missing `api.responses.write` scope.
+
+Codex CLI sign-in may create a separate auto-generated API key. If your local auth file stores that key, this prints only an API-key-shaped value:
 
 ```sh
 codex --login
@@ -53,27 +55,27 @@ const fs = require("fs");
 const path = `${process.env.HOME}/.codex/auth.json`;
 const auth = JSON.parse(fs.readFileSync(path, "utf8"));
 
-function tokenFrom(value) {
-  if (typeof value === "string" && value) return value;
+function apiKeyFrom(value) {
+  if (typeof value === "string" && value.startsWith("sk-")) return value;
   if (!value || typeof value !== "object") return "";
-  for (const key of ["api_key", "key", "token", "access_token", "value"]) {
-    const nested = tokenFrom(value[key]);
+  for (const key of ["api_key", "apiKey", "key", "OPENAI_API_KEY", "value"]) {
+    const nested = apiKeyFrom(value[key]);
     if (nested) return nested;
   }
   return "";
 }
 
-const token = tokenFrom(auth.OPENAI_API_KEY) || tokenFrom(auth.tokens?.access_token);
-if (!token) {
-  throw new Error("No Codex token found in ~/.codex/auth.json");
+const key = apiKeyFrom(auth.OPENAI_API_KEY);
+if (!key) {
+  throw new Error("No local Codex API key found. Use an API key from the OpenAI dashboard.");
 }
-console.log(token);
+console.log(key);
 NODE
 ```
 
-Paste the printed value into `.env` as `OPENAI_CODEX_TOKEN=...`.
+Paste the printed value into `.env` as `OPENAI_CODEX_API_KEY=...`. If the script does not find an `sk-...` value, create or copy an API key from the OpenAI API dashboard and use `OPENAI_API_KEY=...`.
 
-Treat `.env` and Codex tokens as secrets. Do not commit them. If the OpenAI API rejects a Codex token for your account or organization, use `OPENAI_API_KEY` from the API dashboard instead.
+Treat `.env` and API keys as secrets. Do not commit them.
 
 Before creating an OpenAI-backed game, test the configured credential:
 

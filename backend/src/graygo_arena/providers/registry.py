@@ -87,9 +87,9 @@ class ProviderCatalog:
                 auth_type=(
                     "api_key"
                     if self._settings.openai_auth_source == "api_key"
-                    else "codex"
-                    if self._settings.openai_auth_source == "codex_token"
-                    else "api_key_or_codex"
+                    else "codex_api_key"
+                    if self._settings.openai_auth_source == "codex_api_key"
+                    else "api_key_or_codex_key"
                 ),
                 configured=self._settings.openai_auth_token is not None,
                 models=(self._settings.openai_model,),
@@ -116,7 +116,7 @@ class ProviderCatalog:
                 provider=provider,
                 model=model,
                 ok=False,
-                message="not configured",
+                message=self._settings.openai_auth_error or "not configured",
             )
         if provider == "anthropic_default" and self._settings.anthropic_api_key is None:
             return ProviderTestResult(
