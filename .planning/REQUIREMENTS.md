@@ -47,15 +47,15 @@
 
 ### User Interface
 
-- [ ] **UI-01**: User can configure a new game from the SPA, including board size, ruleset, provider/model/credential alias per seat, temperature, max output tokens, run mode, max turns, and visibility toggles.
-- [ ] **UI-02**: User sees a clear notice when the same provider/model is selected for both seats and that isolated seat sessions will be created.
-- [ ] **UI-03**: User can view the live board with coordinates, B/W/G/+ symbols, current status, turn number, and backend BoardKey.
-- [ ] **UI-04**: User can step, run, pause, stop, and export from the live game view.
-- [ ] **UI-05**: User can inspect the latest turn resolution, including Black move, White move, collisions, captures, forbidden updates, and pre/post BoardKeys.
-- [ ] **UI-06**: User can inspect Black and White panels with provider/model, thinking state, current move, strategic summary, errors, and optional raw JSON.
-- [ ] **UI-07**: User can browse game history and expand each turn for public log, private seat summaries, raw provider responses, and backend validation audit when enabled.
-- [ ] **UI-08**: User can inspect a board cell for coordinate, contents, neighbors, group, and liberties.
-- [ ] **UI-09**: User can toggle visualization for toroidal neighbors, last Black move, last White move, collisions, and captured stones.
+- [x] **UI-01**: User can configure a new game from the SPA, including board size, ruleset, provider/model/credential alias per seat, temperature, max output tokens, run mode, max turns, and visibility toggles.
+- [x] **UI-02**: User sees a clear notice when the same provider/model is selected for both seats and that isolated seat sessions will be created.
+- [x] **UI-03**: User can view the live board with coordinates, B/W/G/+ symbols, current status, turn number, and backend BoardKey.
+- [x] **UI-04**: User can step, run, pause, stop, and export from the live game view.
+- [x] **UI-05**: User can inspect the latest turn resolution, including Black move, White move, collisions, captures, forbidden updates, and pre/post BoardKeys.
+- [x] **UI-06**: User can inspect Black and White panels with provider/model, thinking state, current move, strategic summary, errors, and optional raw JSON.
+- [x] **UI-07**: User can browse game history and expand each turn for public log, private seat summaries, raw provider responses, and backend validation audit when enabled.
+- [x] **UI-08**: User can inspect a board cell for coordinate, contents, neighbors, group, and liberties.
+- [x] **UI-09**: User can toggle visualization for toroidal neighbors, last Black move, last White move, collisions, and captured stones.
 - [ ] **UI-10**: User can view provider status and settings without entering or exposing actual secret tokens in the browser.
 
 ## v2 Requirements

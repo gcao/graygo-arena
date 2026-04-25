@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: ready_to_plan
 stopped_at: Phase 1 complete
-last_updated: "2026-04-25T03:12:18Z"
-last_activity: 2026-04-25 - Phase 2 complete with 72 backend tests, Ruff, format check, and Pyright passing.
+last_updated: "2026-04-25T03:46:01Z"
+last_activity: 2026-04-25 - Phase 3 complete with frontend typecheck/build and backend verification passing.
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 16
-  completed_plans: 7
-  percent: 40
+  completed_plans: 11
+  percent: 60
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** The backend must be the trusted arbiter: it must preserve simultaneous move fairness, enforce Gray Go rules exactly, and prevent private seat context from leaking between agents.
-**Current focus:** Phase 3: React Operator UI & Live Inspection
+**Current focus:** Phase 4: Direct OpenAI & Anthropic Providers
 
 ## Current Position
 
-Phase: 3 of 5 (React Operator UI & Live Inspection)
-Plan: 0 of 4 in current phase
+Phase: 4 of 5 (Direct OpenAI & Anthropic Providers)
+Plan: 0 of 2 in current phase
 Status: Ready to plan
-Last activity: 2026-04-25 - Phase 2 complete with 72 backend tests, Ruff, format check, and Pyright passing.
+Last activity: 2026-04-25 - Phase 3 complete with frontend typecheck/build and backend verification passing.
 
-Progress: [####------] 40%
+Progress: [######----] 60%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 7
+- Total plans completed: 11
 - Average duration: N/A
 - Total execution time: 0.0 hours
 
@@ -46,13 +46,13 @@ Progress: [####------] 40%
 |-------|-------|-------|----------|
 | 1. Deterministic Engine & Rule Fixtures | 3/3 | 0.0h | N/A |
 | 2. Fair Orchestrator, API & Persistence | 4/4 | 0.0h | N/A |
-| 3. React Operator UI & Live Inspection | 0/4 | 0.0h | N/A |
+| 3. React Operator UI & Live Inspection | 4/4 | 0.0h | N/A |
 | 4. Direct OpenAI & Anthropic Providers | 0/2 | 0.0h | N/A |
 | 5. Trust Hardening, Replay & Guardrails | 0/3 | 0.0h | N/A |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-03, 02-01, 02-02, 02-03, 02-04
+- Last 5 plans: 02-04, 03-01, 03-02, 03-03, 03-04
 - Trend: N/A
 
 *Updated after each plan completion*
@@ -75,7 +75,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 3]: React UI must treat backend API/SSE state as authoritative and avoid browser-side rule mutation.
+- [Phase 4]: Provider SDK/API details must be checked against current official docs before implementation.
 - [Phase 4]: Provider SDK/model details should be rechecked against official docs during phase planning because provider APIs change.
 - [Phase 5]: Retention, redaction, budget, and leakage audit defaults should be finalized against actual persisted transcript shapes.
 
@@ -92,7 +92,7 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: Phase 2 complete
+Stopped at: Phase 3 complete
 Resume file: .planning/ROADMAP.md
 
 **Planned Phase:** 01 (Deterministic Engine & Rule Fixtures) — 3 plans — 2026-04-25T02:42:17.333Z
@@ -100,3 +100,5 @@ Resume file: .planning/ROADMAP.md
 **Completed Phase:** 01 (Deterministic Engine & Rule Fixtures) — 3/3 plans — 2026-04-25
 
 **Completed Phase:** 02 (Fair Orchestrator, API & Persistence) — 4/4 plans — 2026-04-25
+
+**Completed Phase:** 03 (React Operator UI & Live Inspection) — 4/4 plans — 2026-04-25

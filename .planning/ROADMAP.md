@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Deterministic Engine & Rule Fixtures** - Prove authoritative Gray Go board state, rule resolution, BoardKeys, and regression fixtures.
 - [x] **Phase 2: Fair Orchestrator, API & Persistence** - Run auditable fake/scripted games through fair orchestration, REST contracts, SQLite persistence, privacy boundaries, and an SSE shell.
-- [ ] **Phase 3: React Operator UI & Live Inspection** - Operate and inspect fake/scripted games end-to-end from the SPA.
+- [x] **Phase 3: React Operator UI & Live Inspection** - Operate and inspect fake/scripted games end-to-end from the SPA.
 - [ ] **Phase 4: Direct OpenAI & Anthropic Providers** - Add real direct-provider seats behind backend-only credentials and existing validation.
 - [ ] **Phase 5: Trust Hardening, Replay & Guardrails** - Harden exports, replay, leakage audit, secret handling, retention, and budget guardrails.
 
@@ -69,10 +69,10 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 03-01: React/Vite app shell, generated API client, routing, New Game form, and same-provider/model notice
-- [ ] 03-02: Live board, coordinates, cell inspector, visualization toggles, status, turn number, and BoardKey display
-- [ ] 03-03: Step/run/pause/stop/export controls, SSE client behavior, reconnect/refetch handling, and fake-game verification
-- [ ] 03-04: Turn audit, seat panels, transcript/history browsing, raw JSON display, and validation audit screens
+- [x] 03-01: React/Vite app shell, generated API client, routing, New Game form, and same-provider/model notice
+- [x] 03-02: Live board, coordinates, cell inspector, visualization toggles, status, turn number, and BoardKey display
+- [x] 03-03: Step/run/pause/stop/export controls, SSE client behavior, reconnect/refetch handling, and fake-game verification
+- [x] 03-04: Turn audit, seat panels, transcript/history browsing, raw JSON display, and validation audit screens
 
 ### Phase 4: Direct OpenAI & Anthropic Providers
 **Goal**: Users can run real direct-provider seats through backend-only OpenAI and Anthropic adapters under the same validation, persistence, and seat-isolation rules.
@@ -115,6 +115,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 |-------|----------------|--------|-----------|
 | 1. Deterministic Engine & Rule Fixtures | 3/3 | Complete | 2026-04-25 |
 | 2. Fair Orchestrator, API & Persistence | 4/4 | Complete | 2026-04-25 |
-| 3. React Operator UI & Live Inspection | 0/4 | Not started | - |
+| 3. React Operator UI & Live Inspection | 4/4 | Complete | 2026-04-25 |
 | 4. Direct OpenAI & Anthropic Providers | 0/2 | Not started | - |
 | 5. Trust Hardening, Replay & Guardrails | 0/3 | Not started | - |
