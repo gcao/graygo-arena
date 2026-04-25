@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -149,9 +150,11 @@ def build_router(services: AppServices) -> APIRouter:
         return transcript_response(typed_view, entries)
 
     @router.get("/games/{game_id}/events", response_model=None)
-    def stream_events(game_id: str) -> EventSourceResponse:
+    def stream_events(game_id: str, live: bool = Query(default=False)) -> EventSourceResponse:
         _get_game_or_404(services, game_id)
-        return EventSourceResponse(_event_stream(services, game_id))
+        if live:
+            return EventSourceResponse(_event_stream(services, game_id))
+        return EventSourceResponse(_event_snapshot(services, game_id))
 
     @router.get("/games/{game_id}/events/list")
     def list_events(game_id: str) -> tuple[EventResponse, ...]:
@@ -174,9 +177,21 @@ def build_router(services: AppServices) -> APIRouter:
     return router
 
 
-async def _event_stream(services: AppServices, game_id: str) -> AsyncIterator[dict[str, object]]:
+async def _event_snapshot(services: AppServices, game_id: str) -> AsyncIterator[dict[str, object]]:
     for payload in sse_payloads(services.repository.list_events(game_id)):
         yield payload
+
+
+async def _event_stream(services: AppServices, game_id: str) -> AsyncIterator[dict[str, object]]:
+    sent_ids: set[str] = set()
+    while True:
+        events = services.repository.list_events(game_id)
+        for event in events:
+            if event.id in sent_ids:
+                continue
+            sent_ids.add(event.id)
+            yield sse_payloads((event,))[0]
+        await asyncio.sleep(0.5)
 
 
 def _get_game_or_404(services: AppServices, game_id: str) -> GameRecord:

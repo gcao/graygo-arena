@@ -190,6 +190,17 @@ export default function App() {
     await refresh(updated.id);
   }
 
+  async function handleStart() {
+    if (!game) return;
+    const started = await startGame(game.id);
+    setGame(started);
+    if (started.status === "running" && started.current_turn === 0) {
+      const result = await stepGame(started.id);
+      setGame(result.game);
+    }
+    await refresh(started.id);
+  }
+
   async function handleStep() {
     if (!game) return;
     const result = await stepGame(game.id);
@@ -284,25 +295,25 @@ export default function App() {
         <section className="panel">
           <h2>Controls</h2>
           <div className="control-grid">
-            <IconButton label="Start" onClick={() => runAction(() => handleLifecycle(startGame))}>
+            <IconButton disabled={!game || busy} label="Start" onClick={() => runAction(handleStart)}>
               <Play size={16} />
             </IconButton>
-            <IconButton label="Step" onClick={() => runAction(handleStep)}>
+            <IconButton disabled={!game || busy} label="Step" onClick={() => runAction(handleStep)}>
               <StepForward size={16} />
             </IconButton>
-            <IconButton label="Run" onClick={() => runAction(handleAutorun)}>
+            <IconButton disabled={!game || busy} label="Auto-run" onClick={() => runAction(handleAutorun)}>
               <Activity size={16} />
             </IconButton>
-            <IconButton label="Pause" onClick={() => runAction(() => handleLifecycle(pauseGame))}>
+            <IconButton disabled={!game || busy} label="Pause" onClick={() => runAction(() => handleLifecycle(pauseGame))}>
               <Pause size={16} />
             </IconButton>
-            <IconButton label="Resume" onClick={() => runAction(() => handleLifecycle(resumeGame))}>
+            <IconButton disabled={!game || busy} label="Resume" onClick={() => runAction(() => handleLifecycle(resumeGame))}>
               <RefreshCw size={16} />
             </IconButton>
-            <IconButton label="Stop" onClick={() => runAction(() => handleLifecycle(stopGame))}>
+            <IconButton disabled={!game || busy} label="Stop" onClick={() => runAction(() => handleLifecycle(stopGame))}>
               <StopCircle size={16} />
             </IconButton>
-            <IconButton label="Export" onClick={() => runAction(exportBackendBundle)}>
+            <IconButton disabled={!game || busy} label="Export" onClick={() => runAction(exportBackendBundle)}>
               <Download size={16} />
             </IconButton>
           </div>
@@ -459,15 +470,23 @@ function SeatEditor({
 
 function IconButton({
   children,
+  disabled = false,
   label,
   onClick
 }: {
   children: React.ReactNode;
+  disabled?: boolean;
   label: string;
   onClick: () => void | Promise<void>;
 }) {
   return (
-    <button className="tool-button" onClick={() => void onClick()} title={label} type="button">
+    <button
+      className="tool-button"
+      disabled={disabled}
+      onClick={() => void onClick()}
+      title={label}
+      type="button"
+    >
       {children}
       <span>{label}</span>
     </button>

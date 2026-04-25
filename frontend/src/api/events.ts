@@ -1,5 +1,5 @@
 export function connectGameEvents(gameId: string, onEvent: () => void): () => void {
-  const source = new EventSource(`/api/games/${gameId}/events`);
+  const source = new EventSource(`/api/games/${gameId}/events?live=true`);
   source.onmessage = onEvent;
   source.addEventListener("turn.resolved", onEvent);
   source.addEventListener("game.finished", onEvent);
