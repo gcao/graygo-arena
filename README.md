@@ -44,7 +44,40 @@ OPENAI_MAX_OUTPUT_TOKENS=4096
 
 `OPENAI_API_KEY` takes precedence over `OPENAI_CODEX_API_KEY`.
 
-Do not paste `tokens.access_token` from `~/.codex/auth.json`; that is a Codex/ChatGPT OAuth access token, not a Responses API key, and the API will reject it with missing `api.responses.write` scope.
+Codex OAuth token setup:
+
+```sh
+OPENAI_CODEX_TOKEN=eyJ...
+OPENAI_MODEL=gpt-5.5
+OPENAI_REASONING_EFFORT=xhigh
+```
+
+The OAuth token mode uses the same ChatGPT Codex backend pattern as GSD-2: it calls `https://chatgpt.com/backend-api/codex/responses`, extracts `chatgpt_account_id` from the JWT, and sends that value as `chatgpt-account-id`. It does not send the OAuth token to `api.openai.com/v1/responses`.
+
+To get the Codex OAuth access token from a local Codex login:
+
+```sh
+codex login
+node <<'NODE'
+const fs = require("fs");
+const path = `${process.env.HOME}/.codex/auth.json`;
+const auth = JSON.parse(fs.readFileSync(path, "utf8"));
+const token = auth.tokens?.access_token || auth.OPENAI_CODEX_TOKEN || "";
+if (!token || !token.startsWith("eyJ")) {
+  throw new Error("No Codex OAuth access token found in ~/.codex/auth.json");
+}
+console.log(token);
+NODE
+```
+
+Add the printed value to repo-root `.env` as `OPENAI_CODEX_TOKEN=...`. Optional Codex OAuth overrides are:
+
+```sh
+OPENAI_CODEX_BASE_URL=https://chatgpt.com/backend-api
+OPENAI_CODEX_ORIGINATOR=pi
+```
+
+Credential precedence is `OPENAI_API_KEY`, then `OPENAI_CODEX_API_KEY`, then `OPENAI_CODEX_TOKEN` or `CODEX_TOKEN`.
 
 Codex CLI sign-in may create a separate auto-generated API key. If your local auth file stores that key, this prints only an API-key-shaped value:
 
@@ -89,9 +122,9 @@ If the response has `"ok": false`, fix `.env` before starting a match. The step 
 
 ## Model And Reasoning
 
-`OPENAI_MODEL` can be any model name your account can use with the Responses API. The frontend model field also accepts typed model names per seat, so you can override the advertised default when creating a game.
+`OPENAI_MODEL` can be any model name your account can use with the selected OpenAI mode. The frontend model field also accepts typed model names per seat, so you can override the advertised default when creating a game.
 
-`OPENAI_REASONING_EFFORT` is sent as `reasoning.effort` on OpenAI Responses requests. Supported values are:
+`OPENAI_REASONING_EFFORT` is sent as `reasoning.effort` on OpenAI requests. Supported values are:
 
 ```text
 none
@@ -102,7 +135,7 @@ high
 xhigh
 ```
 
-OpenAI documents `xhigh` support for models after `gpt-5.1-codex-max`; use `high` if a selected model rejects `xhigh`.
+Use `high` if a selected model rejects `xhigh`. `OPENAI_MAX_OUTPUT_TOKENS` is sent only for public Responses API-key requests; Codex OAuth follows the ChatGPT backend streaming request shape.
 
 ## Anthropic Credentials
 

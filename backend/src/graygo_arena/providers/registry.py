@@ -9,6 +9,7 @@ from graygo_arena.core.config import Settings, load_settings
 from graygo_arena.providers.base import ProviderInfo, ProviderTestResult
 from graygo_arena.providers.direct import (
     AnthropicMessagesProvider,
+    OpenAICodexResponsesProvider,
     OpenAIResponsesProvider,
     ProviderCredentialError,
     ProviderServiceError,
@@ -37,13 +38,23 @@ class ProviderCatalog:
             "scripted_sequence": ScriptedSequenceProvider(),
         }
         if self._settings.openai_auth_token:
-            self._adapters["openai_default"] = OpenAIResponsesProvider(
-                auth_token=self._settings.openai_auth_token,
-                default_model=self._settings.openai_model,
-                reasoning_effort=self._settings.openai_reasoning_effort,
-                max_output_tokens=self._settings.openai_max_output_tokens,
-                client=http_client,
-            )
+            if self._settings.openai_auth_source == "codex_oauth":
+                self._adapters["openai_default"] = OpenAICodexResponsesProvider(
+                    auth_token=self._settings.openai_auth_token,
+                    default_model=self._settings.openai_model,
+                    reasoning_effort=self._settings.openai_reasoning_effort,
+                    client=http_client,
+                    base_url=self._settings.openai_codex_base_url,
+                    originator=self._settings.openai_codex_originator,
+                )
+            else:
+                self._adapters["openai_default"] = OpenAIResponsesProvider(
+                    auth_token=self._settings.openai_auth_token,
+                    default_model=self._settings.openai_model,
+                    reasoning_effort=self._settings.openai_reasoning_effort,
+                    max_output_tokens=self._settings.openai_max_output_tokens,
+                    client=http_client,
+                )
         if self._settings.anthropic_api_key:
             self._adapters["anthropic_default"] = AnthropicMessagesProvider(
                 api_key=self._settings.anthropic_api_key,
@@ -89,7 +100,9 @@ class ProviderCatalog:
                     if self._settings.openai_auth_source == "api_key"
                     else "codex_api_key"
                     if self._settings.openai_auth_source == "codex_api_key"
-                    else "api_key_or_codex_key"
+                    else "codex_oauth"
+                    if self._settings.openai_auth_source == "codex_oauth"
+                    else "api_key_or_codex_oauth"
                 ),
                 configured=self._settings.openai_auth_token is not None,
                 models=(self._settings.openai_model,),

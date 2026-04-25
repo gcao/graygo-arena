@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
 
-type OpenAIAuthSource = Literal["api_key", "codex_api_key", "none"]
+type OpenAIAuthSource = Literal["api_key", "codex_api_key", "codex_oauth", "none"]
 type OpenAIReasoningEffort = Literal["none", "minimal", "low", "medium", "high", "xhigh"]
 
 OPENAI_REASONING_EFFORTS: frozenset[str] = frozenset(
@@ -24,6 +24,8 @@ class Settings:
     openai_model: str = "gpt-5.1-codex-max"
     openai_reasoning_effort: OpenAIReasoningEffort = "medium"
     openai_max_output_tokens: int = 2048
+    openai_codex_base_url: str = "https://chatgpt.com/backend-api"
+    openai_codex_originator: str = "pi"
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-sonnet-4-20250514"
 
@@ -37,11 +39,15 @@ def load_settings() -> Settings:
         openai_auth_token=openai_token,
         openai_auth_source=openai_source,
         openai_auth_error=openai_error,
-        openai_model=values.get("OPENAI_MODEL", "gpt-5.1-codex-max"),
+        openai_model=values.get("OPENAI_MODEL", _default_openai_model(openai_source)),
         openai_reasoning_effort=_openai_reasoning_effort(
             values.get("OPENAI_REASONING_EFFORT", "medium")
         ),
         openai_max_output_tokens=_positive_int(values.get("OPENAI_MAX_OUTPUT_TOKENS"), 2048),
+        openai_codex_base_url=values.get(
+            "OPENAI_CODEX_BASE_URL", "https://chatgpt.com/backend-api"
+        ),
+        openai_codex_originator=values.get("OPENAI_CODEX_ORIGINATOR", "pi"),
         anthropic_api_key=_non_empty(values.get("ANTHROPIC_API_KEY")),
         anthropic_model=values.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514"),
     )
@@ -116,23 +122,22 @@ def _openai_auth(values: dict[str, str]) -> tuple[str | None, OpenAIAuthSource, 
     if legacy_codex_value.startswith("sk-"):
         return legacy_codex_value, "codex_api_key", None
     if legacy_codex_value.startswith("eyJ"):
-        return (
-            None,
-            "none",
-            (
-                "OPENAI_CODEX_TOKEN/CODEX_TOKEN looks like a Codex or ChatGPT OAuth access "
-                "token. The Responses API requires an API key with api.responses.write scope. "
-                "Use OPENAI_API_KEY or OPENAI_CODEX_API_KEY with an sk-... key."
-            ),
-        )
+        return legacy_codex_value, "codex_oauth", None
     return (
         None,
         "none",
         (
             "OPENAI_CODEX_TOKEN/CODEX_TOKEN is not an API-key-shaped value. "
-            "Use OPENAI_API_KEY or OPENAI_CODEX_API_KEY with an sk-... key."
+            "Use OPENAI_API_KEY/OPENAI_CODEX_API_KEY with an sk-... key, or "
+            "OPENAI_CODEX_TOKEN with a Codex OAuth access token."
         ),
     )
+
+
+def _default_openai_model(source: OpenAIAuthSource) -> str:
+    if source == "codex_oauth":
+        return "gpt-5.5"
+    return "gpt-5.1-codex-max"
 
 
 def _openai_reasoning_effort(value: str) -> OpenAIReasoningEffort:
