@@ -73,6 +73,27 @@ class MemoryRepository:
     def save_event(self, event: GameEvent) -> None:
         self.events.append(event)
 
+    def list_turns(self, game_id: str) -> tuple[TurnRecord, ...]:
+        return tuple(turn for turn in self.turns if turn.game_id == game_id)
+
+    def get_turn(self, game_id: str, turn_index: int) -> TurnRecord:
+        for turn in self.list_turns(game_id):
+            if turn.turn_index == turn_index:
+                return turn
+        raise KeyError(turn_index)
+
+    def list_transcripts(self, game_id: str, view: str) -> tuple[TranscriptRecord, ...]:
+        if view == "debug":
+            return tuple(item for item in self.transcripts if item.game_id == game_id)
+        return tuple(
+            item
+            for item in self.transcripts
+            if item.game_id == game_id and item.view == view
+        )
+
+    def list_events(self, game_id: str) -> tuple[GameEvent, ...]:
+        return tuple(event for event in self.events if event.game_id == game_id)
+
 
 class SequenceProvider:
     def __init__(self, moves: list[str]) -> None:
