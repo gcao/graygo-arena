@@ -414,6 +414,7 @@ function SeatEditor({
 }) {
   const selectedProvider = providers.find((provider) => provider.id === value.provider) ?? providers[0];
   const models = selectedProvider?.models.length ? selectedProvider.models : ["default"];
+  const modelListId = `${label.toLowerCase()}-model-options`;
   return (
     <fieldset className="seat-editor">
       <legend>{label}</legend>
@@ -439,16 +440,18 @@ function SeatEditor({
       </label>
       <label>
         Model
-        <select
+        <input
+          list={modelListId}
           onChange={(event) => onChange({ ...value, model: event.target.value })}
           value={value.model}
-        >
+        />
+        <datalist id={modelListId}>
           {models.map((model) => (
             <option key={model} value={model}>
               {model}
             </option>
           ))}
-        </select>
+        </datalist>
       </label>
     </fieldset>
   );

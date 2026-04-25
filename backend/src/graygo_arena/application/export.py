@@ -7,7 +7,9 @@ from typing import cast
 
 from graygo_arena.application.models import GameRepository
 
-SECRET_PATTERN = re.compile(r"(sk-[A-Za-z0-9_-]+|sk-ant-[A-Za-z0-9_-]+)")
+SECRET_PATTERN = re.compile(
+    r"(sk-[A-Za-z0-9_-]+|sk-ant-[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)"
+)
 
 
 def build_export_bundle(repository: GameRepository, game_id: str) -> dict[str, object]:

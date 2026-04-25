@@ -32,7 +32,9 @@ def run_guardrails(
         GuardrailCheck(
             name="secret_values_absent",
             ok=SECRET_PATTERN.search(serialized) is None,
-            detail="No raw OpenAI/Anthropic-looking API keys found in exportable records.",
+            detail=(
+                "No raw OpenAI/Anthropic-looking keys or token values found in exportable records."
+            ),
         ),
         GuardrailCheck(
             name="credential_refs_only",

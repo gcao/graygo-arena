@@ -12,6 +12,7 @@ from graygo_arena.application.models import (
     ProviderMoveResponse,
     SeatSession,
 )
+from graygo_arena.core.config import OpenAIReasoningEffort
 
 MOVE_SCHEMA: dict[str, object] = {
     "type": "object",
@@ -33,43 +34,51 @@ class OpenAIResponsesProvider:
     def __init__(
         self,
         *,
-        api_key: str | None,
+        auth_token: str | None,
         default_model: str,
+        reasoning_effort: OpenAIReasoningEffort,
+        max_output_tokens: int,
         client: httpx.Client | None = None,
         base_url: str = "https://api.openai.com/v1",
     ) -> None:
-        self._api_key = api_key
+        self._auth_token = auth_token
         self._default_model = default_model
+        self._reasoning_effort = reasoning_effort
+        self._max_output_tokens = max_output_tokens
         self._client = client or httpx.Client(timeout=30)
         self._base_url = base_url
 
     def request_move(self, request: ProviderMoveRequest, seat: SeatSession) -> ProviderMoveResponse:
-        if not self._api_key:
-            raise ProviderCredentialError("OPENAI_API_KEY is not configured")
+        if not self._auth_token:
+            raise ProviderCredentialError(
+                "OPENAI_API_KEY, OPENAI_CODEX_TOKEN, or CODEX_TOKEN is not configured"
+            )
+        payload: dict[str, object] = {
+            "model": seat.model or self._default_model,
+            "max_output_tokens": self._max_output_tokens,
+            "reasoning": {"effort": self._reasoning_effort},
+            "input": [
+                {
+                    "role": "user",
+                    "content": _move_prompt(request, seat),
+                }
+            ],
+            "text": {
+                "format": {
+                    "type": "json_schema",
+                    "name": "graygo_move",
+                    "schema": MOVE_SCHEMA,
+                    "strict": True,
+                }
+            },
+        }
         response = self._client.post(
             f"{self._base_url}/responses",
             headers={
-                "Authorization": f"Bearer {self._api_key}",
+                "Authorization": f"Bearer {self._auth_token}",
                 "Content-Type": "application/json",
             },
-            json={
-                "model": seat.model or self._default_model,
-                "max_output_tokens": 512,
-                "input": [
-                    {
-                        "role": "user",
-                        "content": _move_prompt(request, seat),
-                    }
-                ],
-                "text": {
-                    "format": {
-                        "type": "json_schema",
-                        "name": "graygo_move",
-                        "schema": MOVE_SCHEMA,
-                        "strict": True,
-                    }
-                },
-            },
+            json=payload,
         )
         response.raise_for_status()
         data = cast(dict[str, object], response.json())

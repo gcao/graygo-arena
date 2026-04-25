@@ -31,10 +31,12 @@ class ProviderCatalog:
             "scripted_pass": ScriptedPassProvider(),
             "scripted_sequence": ScriptedSequenceProvider(),
         }
-        if self._settings.openai_api_key:
+        if self._settings.openai_auth_token:
             self._adapters["openai_default"] = OpenAIResponsesProvider(
-                api_key=self._settings.openai_api_key,
+                auth_token=self._settings.openai_auth_token,
                 default_model=self._settings.openai_model,
+                reasoning_effort=self._settings.openai_reasoning_effort,
+                max_output_tokens=self._settings.openai_max_output_tokens,
                 client=http_client,
             )
         if self._settings.anthropic_api_key:
@@ -77,8 +79,14 @@ class ProviderCatalog:
             ProviderInfo(
                 id="openai_default",
                 provider="openai_default",
-                auth_type="api_key",
-                configured=self._settings.openai_api_key is not None,
+                auth_type=(
+                    "api_key"
+                    if self._settings.openai_auth_source == "api_key"
+                    else "codex"
+                    if self._settings.openai_auth_source == "codex_token"
+                    else "api_key_or_codex"
+                ),
+                configured=self._settings.openai_auth_token is not None,
                 models=(self._settings.openai_model,),
             ),
             ProviderInfo(
@@ -98,7 +106,7 @@ class ProviderCatalog:
         )
 
     def test_provider(self, provider: str, model: str) -> ProviderTestResult:
-        if provider == "openai_default" and self._settings.openai_api_key is None:
+        if provider == "openai_default" and self._settings.openai_auth_token is None:
             return ProviderTestResult(
                 provider=provider,
                 model=model,
