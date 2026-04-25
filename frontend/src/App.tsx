@@ -118,15 +118,16 @@ export default function App() {
     },
     [transcriptView]
   );
+  const gameId = game?.id ?? null;
 
   useEffect(() => {
-    if (!game) {
+    if (!gameId) {
       return undefined;
     }
-    return connectGameEvents(game.id, () => {
-      void refresh(game.id);
+    return connectGameEvents(gameId, () => {
+      void refresh(gameId);
     });
-  }, [game, refresh]);
+  }, [gameId, refresh]);
 
   const latestTurn = turns.at(-1) ?? null;
   const sameSeatNotice =
