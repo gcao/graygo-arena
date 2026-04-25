@@ -31,8 +31,8 @@
 - [x] **PROV-01**: User can list configured provider aliases and models without exposing secret values.
 - [x] **PROV-02**: User can test a configured provider alias/model from the backend.
 - [x] **PROV-03**: System includes fake random and deterministic scripted provider adapters for zero-cost development and verification.
-- [ ] **PROV-04**: System includes an OpenAI direct API adapter that uses backend-only credentials and structured output validation where supported.
-- [ ] **PROV-05**: System includes an Anthropic direct API adapter that uses backend-only credentials and server-side JSON validation.
+- [x] **PROV-04**: System includes an OpenAI direct API adapter that uses backend-only credentials and structured output validation where supported.
+- [x] **PROV-05**: System includes an Anthropic direct API adapter that uses backend-only credentials and server-side JSON validation.
 - [x] **PROV-06**: System stores provider session references, local message history, and previous response identifiers per seat without sharing them across seats.
 - [ ] **PROV-07**: System never stores raw API key or OAuth token values in persistent game, turn, or agent-call records.
 

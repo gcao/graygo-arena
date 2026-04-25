@@ -41,7 +41,9 @@ def test_provider_catalog_lists_safe_metadata_without_secrets() -> None:
         "scripted_pass",
         "scripted_sequence",
     }
-    assert all(provider.auth_type == "none" for provider in providers)
+    fake_providers = [provider for provider in providers if provider.id.startswith("scripted")]
+    fake_providers.append(next(provider for provider in providers if provider.id == "fake_random"))
+    assert all(provider.auth_type == "none" for provider in fake_providers)
     assert "secret" not in repr(providers).lower()
     assert "token" not in repr(providers).lower()
 

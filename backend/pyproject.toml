@@ -6,6 +6,7 @@ readme = "../docs/design.md"
 requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.136.0,<0.137.0",
+    "httpx>=0.28.1",
     "sse-starlette>=3.3.0,<4.0.0",
     "uvicorn[standard]>=0.46.0,<0.47.0",
 ]
@@ -13,7 +14,6 @@ dependencies = [
 [dependency-groups]
 dev = [
     "hypothesis>=6.146.0",
-    "httpx>=0.28.1",
     "pyright>=1.1.407",
     "pytest>=8.4.2",
     "ruff>=0.14.0",

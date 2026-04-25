@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: ready_to_plan
 stopped_at: Phase 1 complete
-last_updated: "2026-04-25T03:46:01Z"
-last_activity: 2026-04-25 - Phase 3 complete with frontend typecheck/build and backend verification passing.
+last_updated: "2026-04-25T03:52:32Z"
+last_activity: 2026-04-25 - Phase 4 complete with mocked direct-provider adapters and 76 backend tests passing.
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 16
-  completed_plans: 11
-  percent: 60
+  completed_plans: 13
+  percent: 80
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** The backend must be the trusted arbiter: it must preserve simultaneous move fairness, enforce Gray Go rules exactly, and prevent private seat context from leaking between agents.
-**Current focus:** Phase 4: Direct OpenAI & Anthropic Providers
+**Current focus:** Phase 5: Trust Hardening, Replay & Guardrails
 
 ## Current Position
 
-Phase: 4 of 5 (Direct OpenAI & Anthropic Providers)
-Plan: 0 of 2 in current phase
+Phase: 5 of 5 (Trust Hardening, Replay & Guardrails)
+Plan: 0 of 3 in current phase
 Status: Ready to plan
-Last activity: 2026-04-25 - Phase 3 complete with frontend typecheck/build and backend verification passing.
+Last activity: 2026-04-25 - Phase 4 complete with mocked direct-provider adapters and 76 backend tests passing.
 
-Progress: [######----] 60%
+Progress: [########--] 80%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 11
+- Total plans completed: 13
 - Average duration: N/A
 - Total execution time: 0.0 hours
 
@@ -47,12 +47,12 @@ Progress: [######----] 60%
 | 1. Deterministic Engine & Rule Fixtures | 3/3 | 0.0h | N/A |
 | 2. Fair Orchestrator, API & Persistence | 4/4 | 0.0h | N/A |
 | 3. React Operator UI & Live Inspection | 4/4 | 0.0h | N/A |
-| 4. Direct OpenAI & Anthropic Providers | 0/2 | 0.0h | N/A |
+| 4. Direct OpenAI & Anthropic Providers | 2/2 | 0.0h | N/A |
 | 5. Trust Hardening, Replay & Guardrails | 0/3 | 0.0h | N/A |
 
 **Recent Trend:**
 
-- Last 5 plans: 02-04, 03-01, 03-02, 03-03, 03-04
+- Last 5 plans: 03-02, 03-03, 03-04, 04-01, 04-02
 - Trend: N/A
 
 *Updated after each plan completion*
@@ -75,7 +75,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 4]: Provider SDK/API details must be checked against current official docs before implementation.
+- [Phase 5]: Redaction, replay, leakage, retention, and budget guardrails should validate real stored provider metadata shapes.
 - [Phase 4]: Provider SDK/model details should be rechecked against official docs during phase planning because provider APIs change.
 - [Phase 5]: Retention, redaction, budget, and leakage audit defaults should be finalized against actual persisted transcript shapes.
 
@@ -92,7 +92,7 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: Phase 3 complete
+Stopped at: Phase 4 complete
 Resume file: .planning/ROADMAP.md
 
 **Planned Phase:** 01 (Deterministic Engine & Rule Fixtures) — 3 plans — 2026-04-25T02:42:17.333Z
@@ -102,3 +102,5 @@ Resume file: .planning/ROADMAP.md
 **Completed Phase:** 02 (Fair Orchestrator, API & Persistence) — 4/4 plans — 2026-04-25
 
 **Completed Phase:** 03 (React Operator UI & Live Inspection) — 4/4 plans — 2026-04-25
+
+**Completed Phase:** 04 (Direct OpenAI & Anthropic Providers) — 2/2 plans — 2026-04-25

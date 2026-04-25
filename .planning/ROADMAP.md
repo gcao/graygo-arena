@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Deterministic Engine & Rule Fixtures** - Prove authoritative Gray Go board state, rule resolution, BoardKeys, and regression fixtures.
 - [x] **Phase 2: Fair Orchestrator, API & Persistence** - Run auditable fake/scripted games through fair orchestration, REST contracts, SQLite persistence, privacy boundaries, and an SSE shell.
 - [x] **Phase 3: React Operator UI & Live Inspection** - Operate and inspect fake/scripted games end-to-end from the SPA.
-- [ ] **Phase 4: Direct OpenAI & Anthropic Providers** - Add real direct-provider seats behind backend-only credentials and existing validation.
+- [x] **Phase 4: Direct OpenAI & Anthropic Providers** - Add real direct-provider seats behind backend-only credentials and existing validation.
 - [ ] **Phase 5: Trust Hardening, Replay & Guardrails** - Harden exports, replay, leakage audit, secret handling, retention, and budget guardrails.
 
 ## Phase Details
@@ -86,8 +86,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: OpenAI direct adapter, structured output handling, health test path, error mapping, and audit metadata
-- [ ] 04-02: Anthropic direct adapter, server-side JSON validation, health test path, error mapping, and fake-to-real provider regression tests
+- [x] 04-01: OpenAI direct adapter, structured output handling, health test path, error mapping, and audit metadata
+- [x] 04-02: Anthropic direct adapter, server-side JSON validation, health test path, error mapping, and fake-to-real provider regression tests
 
 ### Phase 5: Trust Hardening, Replay & Guardrails
 **Goal**: Users can trust and carry away completed real-model games through replay/export, leakage audit, and local guardrails for secrets, retention, and budget exposure.
@@ -116,5 +116,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 1. Deterministic Engine & Rule Fixtures | 3/3 | Complete | 2026-04-25 |
 | 2. Fair Orchestrator, API & Persistence | 4/4 | Complete | 2026-04-25 |
 | 3. React Operator UI & Live Inspection | 4/4 | Complete | 2026-04-25 |
-| 4. Direct OpenAI & Anthropic Providers | 0/2 | Not started | - |
+| 4. Direct OpenAI & Anthropic Providers | 2/2 | Complete | 2026-04-25 |
 | 5. Trust Hardening, Replay & Guardrails | 0/3 | Not started | - |
