@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_execute
-stopped_at: Phase 1 planned
-last_updated: "2026-04-25T02:42:17.339Z"
-last_activity: 2026-04-25 - Phase 1 planned with three executable plans and ready for execution.
+status: ready_to_plan
+stopped_at: Phase 1 complete
+last_updated: "2026-04-25T02:54:15Z"
+last_activity: 2026-04-25 - Phase 1 complete with 54 backend tests, Ruff, format check, and Pyright passing.
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 3
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 16
+  completed_plans: 3
+  percent: 20
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** The backend must be the trusted arbiter: it must preserve simultaneous move fairness, enforce Gray Go rules exactly, and prevent private seat context from leaking between agents.
-**Current focus:** Phase 1: Deterministic Engine & Rule Fixtures
+**Current focus:** Phase 2: Fair Orchestrator, API & Persistence
 
 ## Current Position
 
-Phase: 1 of 5 (Deterministic Engine & Rule Fixtures)
-Plan: 0 of 3 in current phase
-Status: Ready to execute
-Last activity: 2026-04-25 - Phase 1 planned with three executable plans and ready for execution.
+Phase: 2 of 5 (Fair Orchestrator, API & Persistence)
+Plan: 0 of 4 in current phase
+Status: Ready to plan
+Last activity: 2026-04-25 - Phase 1 complete with 54 backend tests, Ruff, format check, and Pyright passing.
 
-Progress: [----------] 0%
+Progress: [##--------] 20%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 3
 - Average duration: N/A
 - Total execution time: 0.0 hours
 
@@ -44,7 +44,7 @@ Progress: [----------] 0%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 1. Deterministic Engine & Rule Fixtures | 0/3 | 0.0h | N/A |
+| 1. Deterministic Engine & Rule Fixtures | 3/3 | 0.0h | N/A |
 | 2. Fair Orchestrator, API & Persistence | 0/4 | 0.0h | N/A |
 | 3. React Operator UI & Live Inspection | 0/4 | 0.0h | N/A |
 | 4. Direct OpenAI & Anthropic Providers | 0/2 | 0.0h | N/A |
@@ -52,7 +52,7 @@ Progress: [----------] 0%
 
 **Recent Trend:**
 
-- Last 5 plans: none
+- Last 5 plans: 01-01, 01-02, 01-03
 - Trend: N/A
 
 *Updated after each plan completion*
@@ -75,7 +75,7 @@ None yet.
 
 ### Blockers/Concerns
 
-- [Phase 1]: Exact Gray Go edge-case semantics for two-stage capture, forbidden updates, pass/scoring, and toroidal topology must be locked into fixtures before implementation.
+- [Phase 2]: Orchestrator, API, persistence, provider aliases, and SSE work must preserve Phase 1's backend-authoritative engine boundary.
 - [Phase 4]: Provider SDK/model details should be rechecked against official docs during phase planning because provider APIs change.
 - [Phase 5]: Retention, redaction, budget, and leakage audit defaults should be finalized against actual persisted transcript shapes.
 
@@ -92,7 +92,9 @@ Items acknowledged and carried forward from previous milestone close:
 ## Session Continuity
 
 Last session: 2026-04-25
-Stopped at: Phase 1 planned
-Resume file: .planning/phases/01-deterministic-engine-rule-fixtures/01-01-PLAN.md
+Stopped at: Phase 1 complete
+Resume file: .planning/ROADMAP.md
 
 **Planned Phase:** 01 (Deterministic Engine & Rule Fixtures) — 3 plans — 2026-04-25T02:42:17.333Z
+
+**Completed Phase:** 01 (Deterministic Engine & Rule Fixtures) — 3/3 plans — 2026-04-25

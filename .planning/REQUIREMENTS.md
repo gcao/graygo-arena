@@ -7,14 +7,14 @@
 
 ### Engine
 
-- [ ] **ENG-01**: System can represent a configurable square Gray Go board with coordinates, symbols, BoardKey serialization, and current turn metadata.
-- [ ] **ENG-02**: System can validate legal moves for each color from the current resolved board, including PASS.
-- [ ] **ENG-03**: System resolves simultaneous Black and White moves from the same pre-turn board without exposing either pending move to the other seat.
-- [ ] **ENG-04**: System converts same-point simultaneous placements into gray collision points according to the Gray Go ruleset.
-- [ ] **ENG-05**: System computes toroidal neighbors, groups, and liberties consistently for all board positions.
-- [ ] **ENG-06**: System applies two-stage captures and forbidden-point updates deterministically.
-- [ ] **ENG-07**: System tracks double-pass state and computes a final score or score estimate when a game ends.
-- [ ] **ENG-08**: Automated tests cover legal move validation, toroidal liberties, collision-to-gray behavior, captures, forbidden points, pass handling, and scoring.
+- [x] **ENG-01**: System can represent a configurable square Gray Go board with coordinates, symbols, BoardKey serialization, and current turn metadata.
+- [x] **ENG-02**: System can validate legal moves for each color from the current resolved board, including PASS.
+- [x] **ENG-03**: System resolves simultaneous Black and White moves from the same pre-turn board without exposing either pending move to the other seat.
+- [x] **ENG-04**: System converts same-point simultaneous placements into gray collision points according to the Gray Go ruleset.
+- [x] **ENG-05**: System computes toroidal neighbors, groups, and liberties consistently for all board positions.
+- [x] **ENG-06**: System applies two-stage captures and forbidden-point updates deterministically.
+- [x] **ENG-07**: System tracks double-pass state and computes a final score or score estimate when a game ends.
+- [x] **ENG-08**: Automated tests cover legal move validation, toroidal liberties, collision-to-gray behavior, captures, forbidden points, pass handling, and scoring.
 
 ### Orchestration
 

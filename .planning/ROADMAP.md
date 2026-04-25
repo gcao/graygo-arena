@@ -12,7 +12,7 @@ Gray Go Arena v1 moves from a deterministic, fixture-proven rule engine to an au
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Deterministic Engine & Rule Fixtures** - Prove authoritative Gray Go board state, rule resolution, BoardKeys, and regression fixtures.
+- [x] **Phase 1: Deterministic Engine & Rule Fixtures** - Prove authoritative Gray Go board state, rule resolution, BoardKeys, and regression fixtures.
 - [ ] **Phase 2: Fair Orchestrator, API & Persistence** - Run auditable fake/scripted games through fair orchestration, REST contracts, SQLite persistence, privacy boundaries, and an SSE shell.
 - [ ] **Phase 3: React Operator UI & Live Inspection** - Operate and inspect fake/scripted games end-to-end from the SPA.
 - [ ] **Phase 4: Direct OpenAI & Anthropic Providers** - Add real direct-provider seats behind backend-only credentials and existing validation.
@@ -33,9 +33,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Board model, coordinates, symbols, BoardKey, turn metadata, and legal move validation
-- [ ] 01-02: Simultaneous resolution, collision-to-gray, toroidal liberties, captures, forbidden points, pass state, and scoring
-- [ ] 01-03: Golden fixtures, property checks, and regression test coverage for engine rules
+- [x] 01-01: Board model, coordinates, symbols, BoardKey, turn metadata, and legal move validation
+- [x] 01-02: Simultaneous resolution, collision-to-gray, toroidal liberties, captures, forbidden points, pass state, and scoring
+- [x] 01-03: Golden fixtures, property checks, and regression test coverage for engine rules
 
 ### Phase 2: Fair Orchestrator, API & Persistence
 **Goal**: Users can run auditable fake/scripted games through backend APIs with fair seat isolation, typed contracts, SQLite persistence, and live event delivery.
@@ -113,7 +113,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Deterministic Engine & Rule Fixtures | 0/3 | Not started | - |
+| 1. Deterministic Engine & Rule Fixtures | 3/3 | Complete | 2026-04-25 |
 | 2. Fair Orchestrator, API & Persistence | 0/4 | Not started | - |
 | 3. React Operator UI & Live Inspection | 0/4 | Not started | - |
 | 4. Direct OpenAI & Anthropic Providers | 0/2 | Not started | - |

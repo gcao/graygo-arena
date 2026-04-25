@@ -1,0 +1,89 @@
+[
+  {
+    "name": "empty_board_round_trip",
+    "size": 7,
+    "pre_board_key": "+++++++/+++++++/+++++++/+++++++/+++++++/+++++++/+++++++",
+    "forbidden": {"black": [], "white": []},
+    "double_pass_count": 0,
+    "black_move": "PASS",
+    "white_move": "PASS",
+    "post_board_key": "+++++++/+++++++/+++++++/+++++++/+++++++/+++++++/+++++++",
+    "expected_events": [{"type": "game_finished"}]
+  },
+  {
+    "name": "same_point_collision_becomes_gray",
+    "size": 7,
+    "pre_board_key": "+++++++/+++++++/+++++++/+++++++/+++++++/+++++++/+++++++",
+    "forbidden": {"black": [], "white": []},
+    "double_pass_count": 0,
+    "black_move": "d4",
+    "white_move": "d4",
+    "post_board_key": "+++++++/+++++++/+++++++/+++G+++/+++++++/+++++++/+++++++",
+    "expected_events": [{"type": "collision", "coordinate": "d4"}]
+  },
+  {
+    "name": "adjacent_simultaneous_placements",
+    "size": 7,
+    "pre_board_key": "+++++++/+++++++/+++++++/+++++++/+++++++/+++++++/+++++++",
+    "forbidden": {"black": [], "white": []},
+    "double_pass_count": 0,
+    "black_move": "d4",
+    "white_move": "d5",
+    "post_board_key": "+++++++/+++++++/+++++++/+++BW++/+++++++/+++++++/+++++++",
+    "expected_events": [
+      {"type": "placement", "color": "black", "coordinate": "d4"},
+      {"type": "placement", "color": "white", "coordinate": "d5"}
+    ]
+  },
+  {
+    "name": "toroidal_capture",
+    "size": 3,
+    "pre_board_key": "+B+/BW+/+B+",
+    "forbidden": {"black": [], "white": []},
+    "double_pass_count": 0,
+    "black_move": "b3",
+    "white_move": "PASS",
+    "post_board_key": "+B+/B+B/+B+",
+    "expected_events": [
+      {"type": "placement", "color": "black", "coordinate": "b3"},
+      {"type": "capture", "color": "white", "coordinates": ["b2"]},
+      {"type": "forbidden_update", "color": "white", "coordinates": ["b2"]}
+    ]
+  },
+  {
+    "name": "forbidden_point_update",
+    "size": 3,
+    "pre_board_key": "+B+/BW+/+B+",
+    "forbidden": {"black": [], "white": []},
+    "double_pass_count": 0,
+    "black_move": "b3",
+    "white_move": "PASS",
+    "post_board_key": "+B+/B+B/+B+",
+    "expected_events": [
+      {"type": "capture", "color": "white", "coordinates": ["b2"]},
+      {"type": "forbidden_update", "color": "white", "coordinates": ["b2"]}
+    ]
+  },
+  {
+    "name": "double_pass_finishes_game",
+    "size": 3,
+    "pre_board_key": "B++/+W+/++G",
+    "forbidden": {"black": [], "white": []},
+    "double_pass_count": 0,
+    "black_move": "PASS",
+    "white_move": "PASS",
+    "post_board_key": "B++/+W+/++G",
+    "expected_events": [{"type": "game_finished"}]
+  },
+  {
+    "name": "pass_plus_placement_does_not_collide",
+    "size": 3,
+    "pre_board_key": "+++/+++/+++",
+    "forbidden": {"black": [], "white": []},
+    "double_pass_count": 1,
+    "black_move": "PASS",
+    "white_move": "b2",
+    "post_board_key": "+++/+W+/+++",
+    "expected_events": [{"type": "placement", "color": "white", "coordinate": "b2"}]
+  }
+]
