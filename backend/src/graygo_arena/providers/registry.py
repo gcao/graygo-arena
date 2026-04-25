@@ -7,7 +7,12 @@ import httpx
 from graygo_arena.application.models import ProviderAdapter, ProviderMoveRequest, SeatSession
 from graygo_arena.core.config import Settings, load_settings
 from graygo_arena.providers.base import ProviderInfo, ProviderTestResult
-from graygo_arena.providers.direct import AnthropicMessagesProvider, OpenAIResponsesProvider
+from graygo_arena.providers.direct import (
+    AnthropicMessagesProvider,
+    OpenAIResponsesProvider,
+    ProviderCredentialError,
+    ProviderServiceError,
+)
 from graygo_arena.providers.fake import (
     FakeRandomProvider,
     ScriptedCenterProvider,
@@ -141,7 +146,15 @@ class ProviderCatalog:
             model=model,
             credential_ref="fake",
         )
-        response = adapter.request_move(request, seat)
+        try:
+            response = adapter.request_move(request, seat)
+        except (ProviderCredentialError, ProviderServiceError) as exc:
+            return ProviderTestResult(
+                provider=provider,
+                model=model,
+                ok=False,
+                message=str(exc),
+            )
         return ProviderTestResult(
             provider=provider,
             model=model,

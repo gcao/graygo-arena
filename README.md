@@ -75,6 +75,16 @@ Paste the printed value into `.env` as `OPENAI_CODEX_TOKEN=...`.
 
 Treat `.env` and Codex tokens as secrets. Do not commit them. If the OpenAI API rejects a Codex token for your account or organization, use `OPENAI_API_KEY` from the API dashboard instead.
 
+Before creating an OpenAI-backed game, test the configured credential:
+
+```sh
+curl -s http://127.0.0.1:8000/api/providers/test \
+  -H 'Content-Type: application/json' \
+  -d '{"provider":"openai_default","model":"gpt-5.5"}'
+```
+
+If the response has `"ok": false`, fix `.env` before starting a match. The step API reports rejected provider credentials as `502` responses instead of server errors.
+
 ## Model And Reasoning
 
 `OPENAI_MODEL` can be any model name your account can use with the Responses API. The frontend model field also accepts typed model names per seat, so you can override the advertised default when creating a game.

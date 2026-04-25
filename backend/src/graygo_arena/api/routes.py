@@ -43,6 +43,7 @@ from graygo_arena.core.config import load_settings
 from graygo_arena.events.bus import sse_payloads
 from graygo_arena.persistence.database import SQLiteDatabase
 from graygo_arena.persistence.repositories import SQLiteRepository
+from graygo_arena.providers.direct import ProviderCredentialError, ProviderServiceError
 from graygo_arena.providers.registry import ProviderCatalog
 
 
@@ -117,14 +118,21 @@ def build_router(services: AppServices) -> APIRouter:
     def step_game(game_id: str) -> StepResponse:
         try:
             return step_response(services.orchestrator.step_game(game_id))
+        except (ProviderCredentialError, ProviderServiceError) as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @router.post("/games/{game_id}/autorun")
     def autorun_game(game_id: str) -> tuple[StepResponse, ...]:
-        return tuple(
-            step_response(result) for result in services.orchestrator.autorun_game(game_id)
-        )
+        try:
+            return tuple(
+                step_response(result) for result in services.orchestrator.autorun_game(game_id)
+            )
+        except (ProviderCredentialError, ProviderServiceError) as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @router.get("/games/{game_id}/turns")
     def list_turns(game_id: str) -> tuple[TurnResponse, ...]:
@@ -183,7 +191,7 @@ async def _event_snapshot(services: AppServices, game_id: str) -> AsyncIterator[
 
 
 async def _event_stream(services: AppServices, game_id: str) -> AsyncIterator[dict[str, object]]:
-    sent_ids: set[str] = set()
+    sent_ids = {event.id for event in services.repository.list_events(game_id)}
     while True:
         events = services.repository.list_events(game_id)
         for event in events:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, cast
+from typing import Any, NoReturn, cast
 
 import httpx
 
@@ -27,6 +27,10 @@ MOVE_SCHEMA: dict[str, object] = {
 
 
 class ProviderCredentialError(RuntimeError):
+    pass
+
+
+class ProviderServiceError(RuntimeError):
     pass
 
 
@@ -72,15 +76,16 @@ class OpenAIResponsesProvider:
                 }
             },
         }
-        response = self._client.post(
-            f"{self._base_url}/responses",
+        response = _post_provider_json(
+            provider="OpenAI",
+            client=self._client,
+            url=f"{self._base_url}/responses",
             headers={
                 "Authorization": f"Bearer {self._auth_token}",
                 "Content-Type": "application/json",
             },
-            json=payload,
+            payload=payload,
         )
-        response.raise_for_status()
         data = cast(dict[str, object], response.json())
         parsed = _parse_move_payload(_extract_openai_text(data))
         return ProviderMoveResponse(
@@ -109,14 +114,16 @@ class AnthropicMessagesProvider:
     def request_move(self, request: ProviderMoveRequest, seat: SeatSession) -> ProviderMoveResponse:
         if not self._api_key:
             raise ProviderCredentialError("ANTHROPIC_API_KEY is not configured")
-        response = self._client.post(
-            f"{self._base_url}/messages",
+        response = _post_provider_json(
+            provider="Anthropic",
+            client=self._client,
+            url=f"{self._base_url}/messages",
             headers={
                 "x-api-key": self._api_key,
                 "anthropic-version": "2023-06-01",
                 "content-type": "application/json",
             },
-            json={
+            payload={
                 "model": seat.model or self._default_model,
                 "max_tokens": 512,
                 "system": "Choose exactly one legal Gray Go move using the provided tool.",
@@ -131,7 +138,6 @@ class AnthropicMessagesProvider:
                 "tool_choice": {"type": "tool", "name": "choose_graygo_move"},
             },
         )
-        response.raise_for_status()
         data = cast(dict[str, object], response.json())
         parsed = _extract_anthropic_tool_payload(data)
         return ProviderMoveResponse(
@@ -156,6 +162,44 @@ def _move_prompt(request: ProviderMoveRequest, seat: SeatSession) -> str:
             "Return board_key, move, and a concise strategic_summary.",
         )
     )
+
+
+def _post_provider_json(
+    *,
+    provider: str,
+    client: httpx.Client,
+    url: str,
+    headers: dict[str, str],
+    payload: dict[str, object],
+) -> httpx.Response:
+    try:
+        response = client.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        _raise_provider_status_error(provider, exc)
+    except httpx.HTTPError as exc:
+        msg = f"{provider} request failed before a response was received: {type(exc).__name__}"
+        raise ProviderServiceError(msg) from exc
+    return response
+
+
+def _raise_provider_status_error(provider: str, exc: httpx.HTTPStatusError) -> NoReturn:
+    status = exc.response.status_code
+    details = _provider_error_details(exc.response)
+    if status in {401, 403}:
+        msg = f"{provider} authentication failed ({status}). Check provider credentials. {details}"
+        raise ProviderCredentialError(msg) from exc
+    msg = f"{provider} request failed ({status}). {details}"
+    raise ProviderServiceError(msg) from exc
+
+
+def _provider_error_details(response: httpx.Response) -> str:
+    body = response.text.strip().replace("\n", " ")
+    if not body:
+        return "Provider response did not include details."
+    if len(body) > 240:
+        body = f"{body[:237]}..."
+    return f"Provider response: {body}"
 
 
 def _parse_move_payload(value: str) -> dict[str, str]:

@@ -1,9 +1,15 @@
 from pathlib import Path
 
+import httpx
 from fastapi.testclient import TestClient
 
-from graygo_arena.api.routes import create_services
+from graygo_arena.api.routes import AppServices, create_services
+from graygo_arena.application.orchestrator import GameOrchestrator
+from graygo_arena.core.config import Settings
 from graygo_arena.main import create_app
+from graygo_arena.persistence.database import SQLiteDatabase
+from graygo_arena.persistence.repositories import SQLiteRepository
+from graygo_arena.providers.registry import ProviderCatalog
 
 
 def client_for(path: Path) -> TestClient:
@@ -69,3 +75,46 @@ def test_event_endpoints_include_sse_shell_headers(tmp_path: Path) -> None:
     assert events.json()[0]["event_type"] == "game.created"
     assert stream.status_code == 200
     assert stream.headers["content-type"].startswith("text/event-stream")
+
+
+def test_step_reports_provider_auth_failure_without_500(tmp_path: Path) -> None:
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, json={"error": {"message": "invalid credentials"}})
+
+    repository = SQLiteRepository(SQLiteDatabase(tmp_path / "api.db"))
+    providers = ProviderCatalog(
+        settings=Settings(
+            openai_auth_token="codex-test-token",
+            openai_auth_source="codex_token",
+            openai_model="gpt-5.5",
+        ),
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    client = TestClient(
+        create_app(
+            AppServices(
+                repository=repository,
+                providers=providers,
+                orchestrator=GameOrchestrator(repository=repository, providers=providers),
+            )
+        )
+    )
+    game_id = client.post(
+        "/api/games",
+        json={
+            "black": {"provider": "openai_default", "model": "gpt-5.5", "credential_ref": "env"},
+            "white": {"provider": "scripted_pass", "model": "default", "credential_ref": "fake"},
+        },
+    ).json()["id"]
+
+    step_response = client.post(f"/api/games/{game_id}/step")
+    provider_test = client.post(
+        "/api/providers/test",
+        json={"provider": "openai_default", "model": "gpt-5.5"},
+    )
+
+    assert step_response.status_code == 502
+    assert "OpenAI authentication failed (401)" in step_response.json()["detail"]
+    assert "codex-test-token" not in step_response.text
+    assert provider_test.status_code == 200
+    assert provider_test.json()["ok"] is False
