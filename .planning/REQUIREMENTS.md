@@ -18,31 +18,31 @@
 
 ### Orchestration
 
-- [ ] **ORCH-01**: User can create a game with board size, ruleset, Black seat config, White seat config, max turns, invalid move policy, visibility options, and run mode.
-- [ ] **ORCH-02**: System creates separate Black and White seat sessions for every game, including same-provider and same-model games.
-- [ ] **ORCH-03**: User can start, pause, resume, stop, autorun, and step exactly one simultaneous turn.
-- [ ] **ORCH-04**: System prompts both seats from the same authoritative pre-turn board and BoardKey before resolving either move.
-- [ ] **ORCH-05**: System validates each agent reply against expected BoardKey, JSON schema, legal moves, and configured retry policy.
-- [ ] **ORCH-06**: System persists each turn before and after resolution with enough audit data to reconstruct the decision and rule outcome.
-- [ ] **ORCH-07**: System publishes live events for agent call start/finish, turn resolution, game finish, and errors.
+- [x] **ORCH-01**: User can create a game with board size, ruleset, Black seat config, White seat config, max turns, invalid move policy, visibility options, and run mode.
+- [x] **ORCH-02**: System creates separate Black and White seat sessions for every game, including same-provider and same-model games.
+- [x] **ORCH-03**: User can start, pause, resume, stop, autorun, and step exactly one simultaneous turn.
+- [x] **ORCH-04**: System prompts both seats from the same authoritative pre-turn board and BoardKey before resolving either move.
+- [x] **ORCH-05**: System validates each agent reply against expected BoardKey, JSON schema, legal moves, and configured retry policy.
+- [x] **ORCH-06**: System persists each turn before and after resolution with enough audit data to reconstruct the decision and rule outcome.
+- [x] **ORCH-07**: System publishes live events for agent call start/finish, turn resolution, game finish, and errors.
 
 ### Providers
 
-- [ ] **PROV-01**: User can list configured provider aliases and models without exposing secret values.
-- [ ] **PROV-02**: User can test a configured provider alias/model from the backend.
-- [ ] **PROV-03**: System includes fake random and deterministic scripted provider adapters for zero-cost development and verification.
+- [x] **PROV-01**: User can list configured provider aliases and models without exposing secret values.
+- [x] **PROV-02**: User can test a configured provider alias/model from the backend.
+- [x] **PROV-03**: System includes fake random and deterministic scripted provider adapters for zero-cost development and verification.
 - [ ] **PROV-04**: System includes an OpenAI direct API adapter that uses backend-only credentials and structured output validation where supported.
 - [ ] **PROV-05**: System includes an Anthropic direct API adapter that uses backend-only credentials and server-side JSON validation.
-- [ ] **PROV-06**: System stores provider session references, local message history, and previous response identifiers per seat without sharing them across seats.
+- [x] **PROV-06**: System stores provider session references, local message history, and previous response identifiers per seat without sharing them across seats.
 - [ ] **PROV-07**: System never stores raw API key or OAuth token values in persistent game, turn, or agent-call records.
 
 ### API and Persistence
 
-- [ ] **API-01**: Backend exposes REST endpoints for provider listing, provider testing, game creation, game retrieval, lifecycle controls, single-step execution, autorun, turns, and transcripts.
-- [ ] **API-02**: Backend exposes an SSE or WebSocket endpoint that streams game events to the UI.
-- [ ] **API-03**: Backend validates request and response bodies with typed schemas.
-- [ ] **API-04**: Backend persists games, seat sessions, turns, agent calls, boards, captures, forbidden updates, public logs, and private seat transcripts in SQLite for local development.
-- [ ] **API-05**: Backend can return public transcript, Black-private transcript, White-private transcript, and debug transcript views with access separation enforced server-side.
+- [x] **API-01**: Backend exposes REST endpoints for provider listing, provider testing, game creation, game retrieval, lifecycle controls, single-step execution, autorun, turns, and transcripts.
+- [x] **API-02**: Backend exposes an SSE or WebSocket endpoint that streams game events to the UI.
+- [x] **API-03**: Backend validates request and response bodies with typed schemas.
+- [x] **API-04**: Backend persists games, seat sessions, turns, agent calls, boards, captures, forbidden updates, public logs, and private seat transcripts in SQLite for local development.
+- [x] **API-05**: Backend can return public transcript, Black-private transcript, White-private transcript, and debug transcript views with access separation enforced server-side.
 - [ ] **API-06**: Backend can export or retrieve enough turn history for UI replay and debugging.
 
 ### User Interface

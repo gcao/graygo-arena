@@ -1,10 +1,17 @@
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
+from graygo_arena.api.routes import create_services
 from graygo_arena.main import create_app
 
 
-def test_provider_list_and_test_endpoint() -> None:
-    client = TestClient(create_app())
+def client_for(path: Path) -> TestClient:
+    return TestClient(create_app(create_services(database_path=path)))
+
+
+def test_provider_list_and_test_endpoint(tmp_path: Path) -> None:
+    client = client_for(tmp_path / "api.db")
 
     providers = client.get("/api/providers")
     provider_test = client.post(
@@ -19,8 +26,8 @@ def test_provider_list_and_test_endpoint() -> None:
     assert provider_test.json()["ok"] is True
 
 
-def test_create_start_step_get_turns_and_transcripts() -> None:
-    client = TestClient(create_app())
+def test_create_start_step_get_turns_and_transcripts(tmp_path: Path) -> None:
+    client = client_for(tmp_path / "api.db")
     create_response = client.post(
         "/api/games",
         json={
@@ -51,8 +58,8 @@ def test_create_start_step_get_turns_and_transcripts() -> None:
     assert private_response.json()["entries"]
 
 
-def test_event_endpoints_include_sse_shell_headers() -> None:
-    client = TestClient(create_app())
+def test_event_endpoints_include_sse_shell_headers(tmp_path: Path) -> None:
+    client = client_for(tmp_path / "api.db")
     game_id = client.post("/api/games", json={}).json()["id"]
 
     events = client.get(f"/api/games/{game_id}/events/list")

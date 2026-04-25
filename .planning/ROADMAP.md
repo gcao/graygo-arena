@@ -13,7 +13,7 @@ Gray Go Arena v1 moves from a deterministic, fixture-proven rule engine to an au
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Deterministic Engine & Rule Fixtures** - Prove authoritative Gray Go board state, rule resolution, BoardKeys, and regression fixtures.
-- [ ] **Phase 2: Fair Orchestrator, API & Persistence** - Run auditable fake/scripted games through fair orchestration, REST contracts, SQLite persistence, privacy boundaries, and an SSE shell.
+- [x] **Phase 2: Fair Orchestrator, API & Persistence** - Run auditable fake/scripted games through fair orchestration, REST contracts, SQLite persistence, privacy boundaries, and an SSE shell.
 - [ ] **Phase 3: React Operator UI & Live Inspection** - Operate and inspect fake/scripted games end-to-end from the SPA.
 - [ ] **Phase 4: Direct OpenAI & Anthropic Providers** - Add real direct-provider seats behind backend-only credentials and existing validation.
 - [ ] **Phase 5: Trust Hardening, Replay & Guardrails** - Harden exports, replay, leakage audit, secret handling, retention, and budget guardrails.
@@ -50,10 +50,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 02-01: Orchestrator lifecycle, per-game locking, same-snapshot prompt flow, validation, retry, and invalid-move policy
-- [ ] 02-02: Fake random/scripted adapters, provider aliases, provider tests, and seat-scoped session state
-- [ ] 02-03: REST schemas, lifecycle endpoints, transcript endpoints, and SSE event shell
-- [ ] 02-04: SQLite persistence, repositories/unit of work, audit records, privacy boundaries, and integration tests
+- [x] 02-01: Orchestrator lifecycle, per-game locking, same-snapshot prompt flow, validation, retry, and invalid-move policy
+- [x] 02-02: Fake random/scripted adapters, provider aliases, provider tests, and seat-scoped session state
+- [x] 02-03: REST schemas, lifecycle endpoints, transcript endpoints, and SSE event shell
+- [x] 02-04: SQLite persistence, repositories/unit of work, audit records, privacy boundaries, and integration tests
 
 ### Phase 3: React Operator UI & Live Inspection
 **Goal**: Users can operate fake/scripted games end-to-end in a React SPA with authoritative board visualization, lifecycle controls, history, and transcript/audit inspection.
@@ -114,7 +114,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Deterministic Engine & Rule Fixtures | 3/3 | Complete | 2026-04-25 |
-| 2. Fair Orchestrator, API & Persistence | 0/4 | Not started | - |
+| 2. Fair Orchestrator, API & Persistence | 4/4 | Complete | 2026-04-25 |
 | 3. React Operator UI & Live Inspection | 0/4 | Not started | - |
 | 4. Direct OpenAI & Anthropic Providers | 0/2 | Not started | - |
 | 5. Trust Hardening, Replay & Guardrails | 0/3 | Not started | - |

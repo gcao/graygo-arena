@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from pathlib import Path
 from typing import cast
 
 from fastapi import APIRouter, HTTPException, Query
@@ -29,22 +30,30 @@ from graygo_arena.api.schemas import (
     transcript_response,
     turn_response,
 )
-from graygo_arena.application.models import GameRecord, TranscriptView
+from graygo_arena.application.models import GameRecord, GameRepository, TranscriptView
 from graygo_arena.application.orchestrator import GameOrchestrator
+from graygo_arena.core.config import load_settings
 from graygo_arena.events.bus import sse_payloads
-from graygo_arena.persistence.repositories import InMemoryRepository
+from graygo_arena.persistence.database import SQLiteDatabase
+from graygo_arena.persistence.repositories import SQLiteRepository
 from graygo_arena.providers.registry import ProviderCatalog
 
 
 @dataclass(frozen=True)
 class AppServices:
-    repository: InMemoryRepository
+    repository: GameRepository
     providers: ProviderCatalog
     orchestrator: GameOrchestrator
 
 
-def create_services() -> AppServices:
-    repository = InMemoryRepository()
+def create_services(
+    *,
+    repository: GameRepository | None = None,
+    database_path: Path | str | None = None,
+) -> AppServices:
+    if repository is None:
+        settings = load_settings()
+        repository = SQLiteRepository(SQLiteDatabase(database_path or settings.database_path))
     providers = ProviderCatalog()
     orchestrator = GameOrchestrator(repository=repository, providers=providers)
     return AppServices(repository=repository, providers=providers, orchestrator=orchestrator)

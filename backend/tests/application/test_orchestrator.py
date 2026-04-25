@@ -86,9 +86,7 @@ class MemoryRepository:
         if view == "debug":
             return tuple(item for item in self.transcripts if item.game_id == game_id)
         return tuple(
-            item
-            for item in self.transcripts
-            if item.game_id == game_id and item.view == view
+            item for item in self.transcripts if item.game_id == game_id and item.view == view
         )
 
     def list_events(self, game_id: str) -> tuple[GameEvent, ...]:
