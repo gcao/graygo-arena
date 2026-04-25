@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Fair Orchestrator, API & Persistence** - Run auditable fake/scripted games through fair orchestration, REST contracts, SQLite persistence, privacy boundaries, and an SSE shell.
 - [x] **Phase 3: React Operator UI & Live Inspection** - Operate and inspect fake/scripted games end-to-end from the SPA.
 - [x] **Phase 4: Direct OpenAI & Anthropic Providers** - Add real direct-provider seats behind backend-only credentials and existing validation.
-- [ ] **Phase 5: Trust Hardening, Replay & Guardrails** - Harden exports, replay, leakage audit, secret handling, retention, and budget guardrails.
+- [x] **Phase 5: Trust Hardening, Replay & Guardrails** - Harden exports, replay, leakage audit, secret handling, retention, and budget guardrails.
 
 ## Phase Details
 
@@ -102,9 +102,9 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 05-01: Replay retrieval, redacted export bundles, and debug history completeness checks
-- [ ] 05-02: Secret-storage audit, leakage checks, transcript/export redaction, and public/private boundary verification
-- [ ] 05-03: Provider settings guardrail UI, retention controls, budget metadata checks, and long-run readiness tests
+- [x] 05-01: Replay retrieval, redacted export bundles, and debug history completeness checks
+- [x] 05-02: Secret-storage audit, leakage checks, transcript/export redaction, and public/private boundary verification
+- [x] 05-03: Provider settings guardrail UI, retention controls, budget metadata checks, and long-run readiness tests
 
 ## Progress
 
@@ -117,4 +117,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 2. Fair Orchestrator, API & Persistence | 4/4 | Complete | 2026-04-25 |
 | 3. React Operator UI & Live Inspection | 4/4 | Complete | 2026-04-25 |
 | 4. Direct OpenAI & Anthropic Providers | 2/2 | Complete | 2026-04-25 |
-| 5. Trust Hardening, Replay & Guardrails | 0/3 | Not started | - |
+| 5. Trust Hardening, Replay & Guardrails | 3/3 | Complete | 2026-04-25 |

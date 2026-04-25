@@ -92,6 +92,9 @@ class MemoryRepository:
     def list_events(self, game_id: str) -> tuple[GameEvent, ...]:
         return tuple(event for event in self.events if event.game_id == game_id)
 
+    def list_agent_calls(self, game_id: str) -> tuple[AgentCallRecord, ...]:
+        return tuple(call for call in self.calls if call.game_id == game_id)
+
 
 class SequenceProvider:
     def __init__(self, moves: list[str]) -> None:

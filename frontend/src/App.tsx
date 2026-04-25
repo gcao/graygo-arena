@@ -4,6 +4,7 @@ import {
   Pause,
   Play,
   RefreshCw,
+  ShieldCheck,
   Square,
   StepForward,
   StopCircle
@@ -13,7 +14,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   autorunGame,
   createGame,
+  exportGame,
   getGame,
+  getGuardrails,
+  getProviderSettings,
   getTranscript,
   listProviders,
   listTurns,
@@ -24,6 +28,7 @@ import {
   stopGame,
   type CreateGameRequest,
   type GameResponse,
+  type GuardrailCheckResponse,
   type ProviderInfo,
   type TranscriptResponse,
   type TranscriptView,
@@ -55,6 +60,7 @@ const defaultSeat: SeatForm = {
 
 export default function App() {
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
+  const [providerSettings, setProviderSettings] = useState<ProviderInfo[]>([]);
   const [black, setBlack] = useState<SeatForm>(defaultSeat);
   const [white, setWhite] = useState<SeatForm>({
     provider: "scripted_pass",
@@ -66,6 +72,7 @@ export default function App() {
   const [game, setGame] = useState<GameResponse | null>(null);
   const [gameConfig, setGameConfig] = useState<GameConfigSnapshot | null>(null);
   const [turns, setTurns] = useState<TurnResponse[]>([]);
+  const [guardrails, setGuardrails] = useState<GuardrailCheckResponse[]>([]);
   const [transcriptView, setTranscriptView] = useState<TranscriptView>("public");
   const [transcript, setTranscript] = useState<TranscriptResponse | null>(null);
   const [selected, setSelected] = useState<Coordinate | null>(null);
@@ -80,6 +87,7 @@ export default function App() {
     listProviders()
       .then((items) => {
         setProviders(items);
+        setProviderSettings(items);
         const first = items[0];
         if (first) {
           setBlack((current) => ({
@@ -90,18 +98,23 @@ export default function App() {
         }
       })
       .catch((err: unknown) => setError(errorMessage(err)));
+    getProviderSettings()
+      .then(setProviderSettings)
+      .catch(() => undefined);
   }, []);
 
   const refresh = useCallback(
     async (gameId: string, view = transcriptView) => {
-      const [nextGame, nextTurns, nextTranscript] = await Promise.all([
+      const [nextGame, nextTurns, nextTranscript, nextGuardrails] = await Promise.all([
         getGame(gameId),
         listTurns(gameId),
-        getTranscript(gameId, view)
+        getTranscript(gameId, view),
+        getGuardrails(gameId)
       ]);
       setGame(nextGame);
       setTurns(nextTurns);
       setTranscript(nextTranscript);
+      setGuardrails(nextGuardrails);
     },
     [transcriptView]
   );
@@ -165,6 +178,7 @@ export default function App() {
     setGameConfig({ black, white });
     setTurns([]);
     setTranscript(null);
+    setGuardrails([]);
     setSelected(null);
     await refresh(created.id);
   }
@@ -196,13 +210,9 @@ export default function App() {
     }
   }
 
-  function exportLocalJson() {
+  async function exportBackendBundle() {
     if (!game) return;
-    const payload = {
-      game,
-      turns,
-      transcript
-    };
+    const payload = await exportGame(game.id);
     const url = URL.createObjectURL(
       new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" })
     );
@@ -292,7 +302,7 @@ export default function App() {
             <IconButton label="Stop" onClick={() => runAction(() => handleLifecycle(stopGame))}>
               <StopCircle size={16} />
             </IconButton>
-            <IconButton label="Export" onClick={exportLocalJson}>
+            <IconButton label="Export" onClick={() => runAction(exportBackendBundle)}>
               <Download size={16} />
             </IconButton>
           </div>
@@ -344,9 +354,39 @@ export default function App() {
               <SeatSummary color="White" config={gameConfig?.white ?? white} move={latestTurn?.white_move} />
             </div>
           </section>
+          <section className="panel">
+            <h2>Settings</h2>
+            <div className="settings-list">
+              {providerSettings.map((provider) => (
+                <div className="settings-row" key={provider.id}>
+                  <span>{provider.id}</span>
+                  <span>{provider.auth_type}</span>
+                  <strong>{provider.configured ? "configured" : "not configured"}</strong>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
 
         <TurnAudit turns={turns} />
+        <section className="panel guardrail-panel">
+          <div className="panel-heading">
+            <h2>Guardrails</h2>
+            <ShieldCheck size={18} />
+          </div>
+          <div className="guardrail-list">
+            {guardrails.length ? (
+              guardrails.map((check) => (
+                <div className={check.ok ? "guardrail-ok" : "guardrail-fail"} key={check.name}>
+                  <strong>{check.name.replaceAll("_", " ")}</strong>
+                  <span>{check.detail}</span>
+                </div>
+              ))
+            ) : (
+              <p className="muted">Create and step a game to run guardrails.</p>
+            )}
+          </div>
+        </section>
         <TranscriptPanel
           onViewChange={(view) => void changeTranscriptView(view)}
           transcript={transcript}

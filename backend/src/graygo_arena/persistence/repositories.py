@@ -122,6 +122,10 @@ class InMemoryRepository:
         with self._lock:
             return tuple(event for event in self.events if event.game_id == game_id)
 
+    def list_agent_calls(self, game_id: str) -> tuple[AgentCallRecord, ...]:
+        with self._lock:
+            return tuple(call for call in self.calls if call.game_id == game_id)
+
 
 class SQLiteRepository:
     def __init__(self, database: SQLiteDatabase) -> None:

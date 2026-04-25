@@ -15,7 +15,9 @@ from sse_starlette.sse import EventSourceResponse
 from graygo_arena.api.schemas import (
     CreateGameRequest,
     EventResponse,
+    ExportBundleResponse,
     GameResponse,
+    GuardrailCheckResponse,
     ProviderInfoResponse,
     ProviderTestRequest,
     ProviderTestResponse,
@@ -23,13 +25,17 @@ from graygo_arena.api.schemas import (
     TranscriptResponse,
     TurnResponse,
     event_response,
+    export_bundle_response,
     game_response,
+    guardrail_check_response,
     provider_info_response,
     provider_test_response,
     step_response,
     transcript_response,
     turn_response,
 )
+from graygo_arena.application.export import build_export_bundle
+from graygo_arena.application.guardrails import run_guardrails
 from graygo_arena.application.models import GameRecord, GameRepository, TranscriptView
 from graygo_arena.application.orchestrator import GameOrchestrator
 from graygo_arena.core.config import load_settings
@@ -64,6 +70,10 @@ def build_router(services: AppServices) -> APIRouter:
 
     @router.get("/providers")
     def list_providers() -> tuple[ProviderInfoResponse, ...]:
+        return tuple(provider_info_response(info) for info in services.providers.list_providers())
+
+    @router.get("/settings/providers")
+    def provider_settings() -> tuple[ProviderInfoResponse, ...]:
         return tuple(provider_info_response(info) for info in services.providers.list_providers())
 
     @router.post("/providers/test")
@@ -147,6 +157,19 @@ def build_router(services: AppServices) -> APIRouter:
     def list_events(game_id: str) -> tuple[EventResponse, ...]:
         _get_game_or_404(services, game_id)
         return tuple(event_response(event) for event in services.repository.list_events(game_id))
+
+    @router.get("/games/{game_id}/export")
+    def export_game(game_id: str) -> ExportBundleResponse:
+        _get_game_or_404(services, game_id)
+        return export_bundle_response(build_export_bundle(services.repository, game_id))
+
+    @router.get("/games/{game_id}/guardrails")
+    def guardrails(game_id: str) -> tuple[GuardrailCheckResponse, ...]:
+        _get_game_or_404(services, game_id)
+        return tuple(
+            guardrail_check_response(check)
+            for check in run_guardrails(services.repository, services.providers, game_id)
+        )
 
     return router
 

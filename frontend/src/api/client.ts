@@ -69,6 +69,22 @@ export type EventResponse = {
   payload: Record<string, string>;
 };
 
+export type ExportBundleResponse = {
+  version: string;
+  game: Record<string, unknown>;
+  seats: Record<string, unknown>[];
+  turns: Record<string, unknown>[];
+  agent_calls: Record<string, unknown>[];
+  transcripts: Record<string, unknown>[];
+  events: Record<string, unknown>[];
+};
+
+export type GuardrailCheckResponse = {
+  name: string;
+  ok: boolean;
+  detail: string;
+};
+
 export async function listProviders(): Promise<ProviderInfo[]> {
   return request<ProviderInfo[]>("/api/providers");
 }
@@ -121,6 +137,18 @@ export async function getTranscript(
 
 export async function listEvents(gameId: string): Promise<EventResponse[]> {
   return request<EventResponse[]>(`/api/games/${gameId}/events/list`);
+}
+
+export async function exportGame(gameId: string): Promise<ExportBundleResponse> {
+  return request<ExportBundleResponse>(`/api/games/${gameId}/export`);
+}
+
+export async function getGuardrails(gameId: string): Promise<GuardrailCheckResponse[]> {
+  return request<GuardrailCheckResponse[]>(`/api/games/${gameId}/guardrails`);
+}
+
+export async function getProviderSettings(): Promise<ProviderInfo[]> {
+  return request<ProviderInfo[]>("/api/settings/providers");
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {

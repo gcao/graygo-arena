@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 from pydantic import BaseModel, ConfigDict, Field
 
+from graygo_arena.application.guardrails import GuardrailCheck
 from graygo_arena.application.models import (
     CreateGameCommand,
     GameEvent,
@@ -116,6 +119,22 @@ class EventResponse(BaseModel):
     payload: dict[str, str]
 
 
+class ExportBundleResponse(BaseModel):
+    version: str
+    game: dict[str, object]
+    seats: list[dict[str, object]]
+    turns: list[dict[str, object]]
+    agent_calls: list[dict[str, object]]
+    transcripts: list[dict[str, object]]
+    events: list[dict[str, object]]
+
+
+class GuardrailCheckResponse(BaseModel):
+    name: str
+    ok: bool
+    detail: str
+
+
 def provider_info_response(info: ProviderInfo) -> ProviderInfoResponse:
     return ProviderInfoResponse(**info.__dict__)
 
@@ -174,6 +193,22 @@ def transcript_response(
 
 def event_response(event: GameEvent) -> EventResponse:
     return EventResponse(id=event.id, event_type=event.event_type, payload=event.payload)
+
+
+def export_bundle_response(bundle: dict[str, object]) -> ExportBundleResponse:
+    return ExportBundleResponse(
+        version=cast(str, bundle["version"]),
+        game=cast(dict[str, object], bundle["game"]),
+        seats=cast(list[dict[str, object]], bundle["seats"]),
+        turns=cast(list[dict[str, object]], bundle["turns"]),
+        agent_calls=cast(list[dict[str, object]], bundle["agent_calls"]),
+        transcripts=cast(list[dict[str, object]], bundle["transcripts"]),
+        events=cast(list[dict[str, object]], bundle["events"]),
+    )
+
+
+def guardrail_check_response(check: GuardrailCheck) -> GuardrailCheckResponse:
+    return GuardrailCheckResponse(name=check.name, ok=check.ok, detail=check.detail)
 
 
 def _seat_config(request: SeatConfigRequest) -> SeatConfig:

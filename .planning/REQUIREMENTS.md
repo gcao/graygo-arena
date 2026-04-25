@@ -34,7 +34,7 @@
 - [x] **PROV-04**: System includes an OpenAI direct API adapter that uses backend-only credentials and structured output validation where supported.
 - [x] **PROV-05**: System includes an Anthropic direct API adapter that uses backend-only credentials and server-side JSON validation.
 - [x] **PROV-06**: System stores provider session references, local message history, and previous response identifiers per seat without sharing them across seats.
-- [ ] **PROV-07**: System never stores raw API key or OAuth token values in persistent game, turn, or agent-call records.
+- [x] **PROV-07**: System never stores raw API key or OAuth token values in persistent game, turn, or agent-call records.
 
 ### API and Persistence
 
@@ -43,7 +43,7 @@
 - [x] **API-03**: Backend validates request and response bodies with typed schemas.
 - [x] **API-04**: Backend persists games, seat sessions, turns, agent calls, boards, captures, forbidden updates, public logs, and private seat transcripts in SQLite for local development.
 - [x] **API-05**: Backend can return public transcript, Black-private transcript, White-private transcript, and debug transcript views with access separation enforced server-side.
-- [ ] **API-06**: Backend can export or retrieve enough turn history for UI replay and debugging.
+- [x] **API-06**: Backend can export or retrieve enough turn history for UI replay and debugging.
 
 ### User Interface
 
@@ -56,7 +56,7 @@
 - [x] **UI-07**: User can browse game history and expand each turn for public log, private seat summaries, raw provider responses, and backend validation audit when enabled.
 - [x] **UI-08**: User can inspect a board cell for coordinate, contents, neighbors, group, and liberties.
 - [x] **UI-09**: User can toggle visualization for toroidal neighbors, last Black move, last White move, collisions, and captured stones.
-- [ ] **UI-10**: User can view provider status and settings without entering or exposing actual secret tokens in the browser.
+- [x] **UI-10**: User can view provider status and settings without entering or exposing actual secret tokens in the browser.
 
 ## v2 Requirements
 
@@ -95,44 +95,44 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ENG-01 | Phase 1 | Pending |
-| ENG-02 | Phase 1 | Pending |
-| ENG-03 | Phase 1 | Pending |
-| ENG-04 | Phase 1 | Pending |
-| ENG-05 | Phase 1 | Pending |
-| ENG-06 | Phase 1 | Pending |
-| ENG-07 | Phase 1 | Pending |
-| ENG-08 | Phase 1 | Pending |
-| ORCH-01 | Phase 2 | Pending |
-| ORCH-02 | Phase 2 | Pending |
-| ORCH-03 | Phase 2 | Pending |
-| ORCH-04 | Phase 2 | Pending |
-| ORCH-05 | Phase 2 | Pending |
-| ORCH-06 | Phase 2 | Pending |
-| ORCH-07 | Phase 2 | Pending |
-| PROV-01 | Phase 2 | Pending |
-| PROV-02 | Phase 2 | Pending |
-| PROV-03 | Phase 2 | Pending |
-| PROV-04 | Phase 4 | Pending |
-| PROV-05 | Phase 4 | Pending |
-| PROV-06 | Phase 2 | Pending |
-| PROV-07 | Phase 5 | Pending |
-| API-01 | Phase 2 | Pending |
-| API-02 | Phase 2 | Pending |
-| API-03 | Phase 2 | Pending |
-| API-04 | Phase 2 | Pending |
-| API-05 | Phase 2 | Pending |
-| API-06 | Phase 5 | Pending |
-| UI-01 | Phase 3 | Pending |
-| UI-02 | Phase 3 | Pending |
-| UI-03 | Phase 3 | Pending |
-| UI-04 | Phase 3 | Pending |
-| UI-05 | Phase 3 | Pending |
-| UI-06 | Phase 3 | Pending |
-| UI-07 | Phase 3 | Pending |
-| UI-08 | Phase 3 | Pending |
-| UI-09 | Phase 3 | Pending |
-| UI-10 | Phase 5 | Pending |
+| ENG-01 | Phase 1 | Complete |
+| ENG-02 | Phase 1 | Complete |
+| ENG-03 | Phase 1 | Complete |
+| ENG-04 | Phase 1 | Complete |
+| ENG-05 | Phase 1 | Complete |
+| ENG-06 | Phase 1 | Complete |
+| ENG-07 | Phase 1 | Complete |
+| ENG-08 | Phase 1 | Complete |
+| ORCH-01 | Phase 2 | Complete |
+| ORCH-02 | Phase 2 | Complete |
+| ORCH-03 | Phase 2 | Complete |
+| ORCH-04 | Phase 2 | Complete |
+| ORCH-05 | Phase 2 | Complete |
+| ORCH-06 | Phase 2 | Complete |
+| ORCH-07 | Phase 2 | Complete |
+| PROV-01 | Phase 2 | Complete |
+| PROV-02 | Phase 2 | Complete |
+| PROV-03 | Phase 2 | Complete |
+| PROV-04 | Phase 4 | Complete |
+| PROV-05 | Phase 4 | Complete |
+| PROV-06 | Phase 2 | Complete |
+| PROV-07 | Phase 5 | Complete |
+| API-01 | Phase 2 | Complete |
+| API-02 | Phase 2 | Complete |
+| API-03 | Phase 2 | Complete |
+| API-04 | Phase 2 | Complete |
+| API-05 | Phase 2 | Complete |
+| API-06 | Phase 5 | Complete |
+| UI-01 | Phase 3 | Complete |
+| UI-02 | Phase 3 | Complete |
+| UI-03 | Phase 3 | Complete |
+| UI-04 | Phase 3 | Complete |
+| UI-05 | Phase 3 | Complete |
+| UI-06 | Phase 3 | Complete |
+| UI-07 | Phase 3 | Complete |
+| UI-08 | Phase 3 | Complete |
+| UI-09 | Phase 3 | Complete |
+| UI-10 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 38 total

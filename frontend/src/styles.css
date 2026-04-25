@@ -336,7 +336,9 @@ pre {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
-.seat-summary {
+.seat-summary,
+.settings-list,
+.guardrail-list {
   display: grid;
   gap: 0.6rem;
   margin-top: 0.75rem;
@@ -353,6 +355,40 @@ pre {
 .seat-card span {
   color: #56635f;
   font-size: 0.82rem;
+}
+
+.settings-row,
+.guardrail-ok,
+.guardrail-fail {
+  border: 1px solid #d8dfdc;
+  border-radius: 8px;
+  display: grid;
+  gap: 0.22rem;
+  padding: 0.6rem;
+}
+
+.settings-row {
+  grid-template-columns: 1fr auto auto;
+}
+
+.settings-row span,
+.settings-row strong,
+.guardrail-ok span,
+.guardrail-fail span {
+  font-size: 0.78rem;
+}
+
+.settings-row strong,
+.guardrail-ok strong {
+  color: #0f766e;
+}
+
+.guardrail-fail {
+  border-color: #f2a7b8;
+}
+
+.guardrail-fail strong {
+  color: #be123c;
 }
 
 .audit-summary,
