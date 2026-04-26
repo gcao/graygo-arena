@@ -13,6 +13,8 @@ from graygo_arena.application.models import (
     GameRecord,
     GameStatus,
     InvalidMovePolicy,
+    MoveSource,
+    PendingMove,
     SeatSession,
     TranscriptRecord,
     TranscriptView,
@@ -40,6 +42,7 @@ class InMemoryRepository:
         self.games: dict[str, GameRecord] = {}
         self.seats: dict[str, SeatSession] = {}
         self.turns: list[TurnRecord] = []
+        self.pending_moves: list[PendingMove] = []
         self.calls: list[AgentCallRecord] = []
         self.transcripts: list[TranscriptRecord] = []
         self.events: list[GameEvent] = []
@@ -84,6 +87,35 @@ class InMemoryRepository:
             return tuple(
                 item.text for item in self.transcripts if item.seat_session_id == seat_session_id
             )
+
+    def save_pending_move(self, move: PendingMove) -> None:
+        with self._lock:
+            self.pending_moves = [
+                item
+                for item in self.pending_moves
+                if not (
+                    item.game_id == move.game_id
+                    and item.turn_index == move.turn_index
+                    and item.color == move.color
+                )
+            ]
+            self.pending_moves.append(move)
+
+    def get_pending_moves(self, game_id: str, turn_index: int) -> tuple[PendingMove, ...]:
+        with self._lock:
+            return tuple(
+                item
+                for item in self.pending_moves
+                if item.game_id == game_id and item.turn_index == turn_index
+            )
+
+    def delete_pending_moves(self, game_id: str, turn_index: int) -> None:
+        with self._lock:
+            self.pending_moves = [
+                item
+                for item in self.pending_moves
+                if not (item.game_id == game_id and item.turn_index == turn_index)
+            ]
 
     def save_turn(self, turn: TurnRecord) -> None:
         with self._lock:
@@ -224,6 +256,55 @@ class SQLiteRepository:
             (seat_session_id,),
         )
         return tuple(cast(str, row["text"]) for row in rows)
+
+    def save_pending_move(self, move: PendingMove) -> None:
+        self._database.execute(
+            """
+            INSERT INTO pending_moves (
+              id, game_id, turn_index, seat_session_id, color, move, source,
+              raw_response, valid, error, attempt
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(game_id, turn_index, color) DO UPDATE SET
+              id=excluded.id,
+              seat_session_id=excluded.seat_session_id,
+              move=excluded.move,
+              source=excluded.source,
+              raw_response=excluded.raw_response,
+              valid=excluded.valid,
+              error=excluded.error,
+              attempt=excluded.attempt
+            """,
+            (
+                move.id,
+                move.game_id,
+                move.turn_index,
+                move.seat_session_id,
+                move.color,
+                move.move,
+                move.source,
+                move.raw_response,
+                int(move.valid),
+                move.error,
+                move.attempt,
+            ),
+        )
+
+    def get_pending_moves(self, game_id: str, turn_index: int) -> tuple[PendingMove, ...]:
+        rows = self._database.fetch_all(
+            """
+            SELECT * FROM pending_moves
+            WHERE game_id = ? AND turn_index = ?
+            ORDER BY color
+            """,
+            (game_id, turn_index),
+        )
+        return tuple(_pending_move_from_row(row) for row in rows)
+
+    def delete_pending_moves(self, game_id: str, turn_index: int) -> None:
+        self._database.execute(
+            "DELETE FROM pending_moves WHERE game_id = ? AND turn_index = ?",
+            (game_id, turn_index),
+        )
 
     def save_turn(self, turn: TurnRecord) -> None:
         self._database.execute(
@@ -414,6 +495,22 @@ def _turn_from_row(row: sqlite3.Row) -> TurnRecord:
         white_move=cast(str, row["white_move"]),
         resolution=resolution,
         status=cast(Literal["resolved", "invalid", "finished"], row["status"]),
+    )
+
+
+def _pending_move_from_row(row: sqlite3.Row) -> PendingMove:
+    return PendingMove(
+        id=cast(str, row["id"]),
+        game_id=cast(str, row["game_id"]),
+        turn_index=cast(int, row["turn_index"]),
+        seat_session_id=cast(str, row["seat_session_id"]),
+        color=cast(SeatColor, row["color"]),
+        move=cast(str, row["move"]),
+        source=cast(MoveSource, row["source"]),
+        raw_response=cast(str, row["raw_response"]),
+        valid=bool(row["valid"]),
+        error=cast(str | None, row["error"]),
+        attempt=cast(int, row["attempt"]),
     )
 
 

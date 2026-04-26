@@ -1,12 +1,15 @@
 import {
   Activity,
+  CheckCircle2,
+  Clock,
   Download,
   Pause,
   Play,
   RefreshCw,
   Square,
   StepForward,
-  StopCircle
+  StopCircle,
+  UserRound
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -23,9 +26,12 @@ import {
   startGame,
   stepGame,
   stopGame,
+  submitHumanMove,
   type CreateGameRequest,
   type GameResponse,
+  type HumanMoveResponse,
   type ProviderInfo,
+  type SeatColor,
   type TranscriptResponse,
   type TranscriptView,
   type TurnResponse
@@ -35,7 +41,7 @@ import { BoardGrid } from "./components/BoardGrid";
 import { CellInspector } from "./components/CellInspector";
 import { TranscriptPanel } from "./components/TranscriptPanel";
 import { TurnAudit } from "./components/TurnAudit";
-import type { Coordinate } from "./game/board";
+import { cellAt, coordinateLabel, type Coordinate } from "./game/board";
 import {
   isResumableGame,
   readPersistedWorkspace,
@@ -76,6 +82,7 @@ export default function App() {
   );
   const [transcript, setTranscript] = useState<TranscriptResponse | null>(null);
   const [selected, setSelected] = useState<Coordinate | null>(null);
+  const [humanMoveColor, setHumanMoveColor] = useState<SeatColor>("black");
   const [showNeighbors, setShowNeighbors] = useState(
     () => persistedWorkspace.settings.display.showNeighbors
   );
@@ -202,6 +209,27 @@ export default function App() {
   }, [gameId, refresh]);
 
   const latestTurn = turns.at(-1) ?? null;
+  const blackConfig = gameConfig?.black ?? black;
+  const whiteConfig = gameConfig?.white ?? white;
+  const humanColors = useMemo(
+    () =>
+      [
+        blackConfig.provider === "human" ? "black" : null,
+        whiteConfig.provider === "human" ? "white" : null
+      ].filter((color): color is SeatColor => color !== null),
+    [blackConfig.provider, whiteConfig.provider]
+  );
+  const pendingMoves = game?.pending_moves ?? {
+    black: { status: "none" },
+    white: { status: "none" }
+  };
+  const availableHumanColors = humanColors.filter(
+    (color) => pendingMoves[color]?.status === "none"
+  );
+  const activeHumanColor =
+    availableHumanColors.includes(humanMoveColor) ? humanMoveColor : availableHumanColors[0] ?? null;
+  const isHumanGame = humanColors.length > 0;
+  const canSealHumanMove = Boolean(game && game.status === "running" && activeHumanColor && !busy);
   const displayStatus =
     autoRunMode === "running"
       ? "auto-run"
@@ -209,7 +237,9 @@ export default function App() {
         ? "paused"
         : game?.status ?? "no game";
   const sameSeatNotice =
-    black.provider === white.provider && black.model === white.model
+    black.provider !== "human" &&
+    black.provider === white.provider &&
+    black.model === white.model
       ? "Same provider/model selected; backend will create isolated Black and White seat sessions."
       : null;
 
@@ -228,6 +258,12 @@ export default function App() {
           ],
     [providers]
   );
+
+  useEffect(() => {
+    if (activeHumanColor && activeHumanColor !== humanMoveColor) {
+      setHumanMoveColor(activeHumanColor);
+    }
+  }, [activeHumanColor, humanMoveColor]);
 
   async function runAction(action: () => Promise<void>) {
     setBusy(true);
@@ -274,6 +310,35 @@ export default function App() {
     const result = await stepGame(game.id);
     applyGame(result.game);
     await refresh(result.game.id);
+  }
+
+  async function submitHumanMoveAndRefresh(color: SeatColor, move: string): Promise<HumanMoveResponse> {
+    if (!game) {
+      throw new Error("No active game");
+    }
+    const result = await submitHumanMove(game.id, color, move);
+    applyGame(result.game);
+    await refresh(result.game.id);
+    return result;
+  }
+
+  async function handleBoardPoint(coordinate: Coordinate) {
+    setSelected(coordinate);
+    if (!game || !canSealHumanMove || !activeHumanColor) {
+      return;
+    }
+    if (cellAt(game.board, coordinate) !== "+") {
+      setError("Select an empty point for the human move.");
+      return;
+    }
+    const move = coordinateLabel(coordinate);
+    await runAction(async () => {
+      await submitHumanMoveAndRefresh(activeHumanColor, move);
+    });
+  }
+
+  async function handleHumanPass(color: SeatColor) {
+    await submitHumanMoveAndRefresh(color, "PASS");
   }
 
   async function handleAutorun() {
@@ -445,41 +510,54 @@ export default function App() {
         <section className="panel">
           <h2>Controls</h2>
           {game ? (
-            <div className="control-grid">
-              {game.status === "created" ? (
-                <IconButton disabled={busy} label="Start" onClick={() => runAction(handleStart)}>
-                  <Play size={16} />
-                </IconButton>
-              ) : null}
-              {game.status === "running" && autoRunMode === "idle" ? (
-                <>
-                  <IconButton disabled={busy} label="Step" onClick={() => runAction(handleStep)}>
-                    <StepForward size={16} />
+            <>
+              <div className="control-grid">
+                {game.status === "created" ? (
+                  <IconButton disabled={busy} label="Start" onClick={() => runAction(handleStart)}>
+                    <Play size={16} />
                   </IconButton>
-                  <IconButton disabled={busy} label="Auto-run" onClick={() => void handleAutorun()}>
-                    <Activity size={16} />
+                ) : null}
+                {game.status === "running" && autoRunMode === "idle" && !isHumanGame ? (
+                  <>
+                    <IconButton disabled={busy} label="Step" onClick={() => runAction(handleStep)}>
+                      <StepForward size={16} />
+                    </IconButton>
+                    <IconButton disabled={busy} label="Auto-run" onClick={() => void handleAutorun()}>
+                      <Activity size={16} />
+                    </IconButton>
+                  </>
+                ) : null}
+                {autoRunMode === "running" ? (
+                  <IconButton disabled={busy} label="Pause" onClick={() => runAction(handlePause)}>
+                    <Pause size={16} />
                   </IconButton>
-                </>
-              ) : null}
-              {autoRunMode === "running" ? (
-                <IconButton disabled={busy} label="Pause" onClick={() => runAction(handlePause)}>
-                  <Pause size={16} />
+                ) : null}
+                {game.status === "paused" || autoRunMode === "paused" ? (
+                  <IconButton disabled={busy} label="Resume" onClick={() => runAction(handleResume)}>
+                    <RefreshCw size={16} />
+                  </IconButton>
+                ) : null}
+                {game.status === "running" || game.status === "paused" || autoRunMode !== "idle" ? (
+                  <IconButton disabled={busy} label="Stop" onClick={() => runAction(handleStop)}>
+                    <StopCircle size={16} />
+                  </IconButton>
+                ) : null}
+                <IconButton disabled={busy} label="Export" onClick={() => runAction(exportBackendBundle)}>
+                  <Download size={16} />
                 </IconButton>
+              </div>
+              {isHumanGame ? (
+                <HumanMovePanel
+                  activeColor={activeHumanColor}
+                  busy={busy}
+                  humanColors={humanColors}
+                  onPass={(color) => runAction(() => handleHumanPass(color))}
+                  onSelectColor={setHumanMoveColor}
+                  pendingMoves={pendingMoves}
+                  status={game.status}
+                />
               ) : null}
-              {game.status === "paused" || autoRunMode === "paused" ? (
-                <IconButton disabled={busy} label="Resume" onClick={() => runAction(handleResume)}>
-                  <RefreshCw size={16} />
-                </IconButton>
-              ) : null}
-              {game.status === "running" || game.status === "paused" || autoRunMode !== "idle" ? (
-                <IconButton disabled={busy} label="Stop" onClick={() => runAction(handleStop)}>
-                  <StopCircle size={16} />
-                </IconButton>
-              ) : null}
-              <IconButton disabled={busy} label="Export" onClick={() => runAction(exportBackendBundle)}>
-                <Download size={16} />
-              </IconButton>
-            </div>
+            </>
           ) : (
             <p className="muted control-empty">Create a game to show match controls.</p>
           )}
@@ -507,7 +585,7 @@ export default function App() {
             <BoardGrid
               board={game.board}
               latestTurn={latestTurn}
-              onSelect={setSelected}
+              onSelect={(coordinate) => void handleBoardPoint(coordinate)}
               selected={selected}
               showCaptures={showCaptures}
               showCollisions={showCollisions}
@@ -574,6 +652,7 @@ function SeatEditor({
   const selectedProvider = providers.find((provider) => provider.id === value.provider) ?? providers[0];
   const models = selectedProvider?.models.length ? selectedProvider.models : ["default"];
   const modelListId = `${label.toLowerCase()}-model-options`;
+  const isHumanProvider = selectedProvider?.id === "human";
   return (
     <fieldset className="seat-editor">
       <legend>{label}</legend>
@@ -585,7 +664,8 @@ function SeatEditor({
             onChange({
               ...value,
               provider: event.target.value,
-              model: nextProvider?.models[0] ?? "default"
+              model: nextProvider?.models[0] ?? "default",
+              credential_ref: event.target.value === "human" ? "human" : value.credential_ref
             });
           }}
           value={value.provider}
@@ -600,6 +680,7 @@ function SeatEditor({
       <label>
         Model
         <input
+          disabled={isHumanProvider}
           list={modelListId}
           onChange={(event) => onChange({ ...value, model: event.target.value })}
           value={value.model}
@@ -613,6 +694,64 @@ function SeatEditor({
         </datalist>
       </label>
     </fieldset>
+  );
+}
+
+function HumanMovePanel({
+  activeColor,
+  busy,
+  humanColors,
+  onPass,
+  onSelectColor,
+  pendingMoves,
+  status
+}: {
+  activeColor: SeatColor | null;
+  busy: boolean;
+  humanColors: SeatColor[];
+  onPass: (color: SeatColor) => void | Promise<void>;
+  onSelectColor: (color: SeatColor) => void;
+  pendingMoves: GameResponse["pending_moves"];
+  status: string;
+}) {
+  return (
+    <div className="human-panel">
+      <div className="human-seat-row">
+        {humanColors.map((color) => {
+          const moveStatus = pendingMoves[color]?.status ?? "none";
+          const isActive = activeColor === color && moveStatus === "none";
+          return (
+            <button
+              className={`human-seat-button ${isActive ? "active" : ""}`}
+              disabled={busy || moveStatus !== "none" || status !== "running"}
+              key={color}
+              onClick={() => onSelectColor(color)}
+              type="button"
+            >
+              {moveStatus === "sealed" ? (
+                <CheckCircle2 size={15} />
+              ) : moveStatus === "thinking" ? (
+                <Clock size={15} />
+              ) : (
+                <UserRound size={15} />
+              )}
+              <span>{capitalize(color)}</span>
+              <strong>{moveStatus}</strong>
+            </button>
+          );
+        })}
+      </div>
+      {activeColor ? (
+        <button
+          className="secondary-action"
+          disabled={busy || pendingMoves[activeColor]?.status !== "none" || status !== "running"}
+          onClick={() => void onPass(activeColor)}
+          type="button"
+        >
+          Pass {capitalize(activeColor)}
+        </button>
+      ) : null}
+    </div>
   );
 }
 
@@ -675,6 +814,10 @@ function SeatSummary({
       <span>Last move: {move ?? "none"}</span>
     </div>
   );
+}
+
+function capitalize(value: string): string {
+  return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
 }
 
 function errorMessage(err: unknown): string {

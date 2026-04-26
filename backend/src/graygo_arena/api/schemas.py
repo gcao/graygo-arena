@@ -11,12 +11,14 @@ from graygo_arena.application.models import (
     CreateGameCommand,
     GameEvent,
     GameRecord,
+    HumanMoveResult,
     SeatConfig,
     StepResult,
     TranscriptRecord,
     TranscriptView,
     TurnRecord,
 )
+from graygo_arena.engine.moves import SeatColor
 from graygo_arena.providers.base import ProviderInfo, ProviderTestResult
 
 
@@ -63,6 +65,12 @@ class ProviderTestRequest(BaseModel):
     model: str = "default"
 
 
+class SubmitHumanMoveRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    move: str
+
+
 class ProviderInfoResponse(BaseModel):
     id: str
     provider: str
@@ -78,6 +86,10 @@ class ProviderTestResponse(BaseModel):
     message: str
 
 
+class PendingSeatMoveResponse(BaseModel):
+    status: str = "none"
+
+
 class GameResponse(BaseModel):
     id: str
     status: str
@@ -90,6 +102,7 @@ class GameResponse(BaseModel):
     white_seat_id: str
     double_pass_count: int
     max_turns: int
+    pending_moves: dict[SeatColor, PendingSeatMoveResponse]
 
 
 class TurnResponse(BaseModel):
@@ -106,6 +119,11 @@ class TurnResponse(BaseModel):
 class StepResponse(BaseModel):
     game: GameResponse
     turn: TurnResponse
+
+
+class HumanMoveResponse(BaseModel):
+    game: GameResponse
+    turn: TurnResponse | None
 
 
 class TranscriptResponse(BaseModel):
@@ -143,7 +161,8 @@ def provider_test_response(result: ProviderTestResult) -> ProviderTestResponse:
     return ProviderTestResponse(**result.__dict__)
 
 
-def game_response(game: GameRecord) -> GameResponse:
+def game_response(game: GameRecord, pending: dict[SeatColor, str] | None = None) -> GameResponse:
+    pending_moves = pending or {"black": "none", "white": "none"}
     return GameResponse(
         id=game.id,
         status=game.status,
@@ -156,6 +175,10 @@ def game_response(game: GameRecord) -> GameResponse:
         white_seat_id=game.white_seat_id,
         double_pass_count=game.double_pass_count,
         max_turns=game.max_turns,
+        pending_moves={
+            "black": PendingSeatMoveResponse(status=pending_moves.get("black", "none")),
+            "white": PendingSeatMoveResponse(status=pending_moves.get("white", "none")),
+        },
     )
 
 
@@ -182,6 +205,16 @@ def turn_response(turn: TurnRecord) -> TurnResponse:
 
 def step_response(result: StepResult) -> StepResponse:
     return StepResponse(game=game_response(result.game), turn=turn_response(result.turn))
+
+
+def human_move_response(
+    result: HumanMoveResult,
+    pending: dict[SeatColor, str] | None = None,
+) -> HumanMoveResponse:
+    return HumanMoveResponse(
+        game=game_response(result.game, pending),
+        turn=turn_response(result.turn) if result.turn is not None else None,
+    )
 
 
 def transcript_response(

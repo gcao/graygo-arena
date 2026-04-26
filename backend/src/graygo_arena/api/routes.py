@@ -19,16 +19,19 @@ from graygo_arena.api.schemas import (
     ExportBundleResponse,
     GameResponse,
     GuardrailCheckResponse,
+    HumanMoveResponse,
     ProviderInfoResponse,
     ProviderTestRequest,
     ProviderTestResponse,
     StepResponse,
+    SubmitHumanMoveRequest,
     TranscriptResponse,
     TurnResponse,
     event_response,
     export_bundle_response,
     game_response,
     guardrail_check_response,
+    human_move_response,
     provider_info_response,
     provider_test_response,
     step_response,
@@ -40,6 +43,7 @@ from graygo_arena.application.guardrails import run_guardrails
 from graygo_arena.application.models import GameRecord, GameRepository, TranscriptView
 from graygo_arena.application.orchestrator import GameOrchestrator
 from graygo_arena.core.config import load_settings
+from graygo_arena.engine.moves import SeatColor
 from graygo_arena.events.bus import sse_payloads
 from graygo_arena.persistence.database import SQLiteDatabase
 from graygo_arena.persistence.repositories import SQLiteRepository
@@ -92,27 +96,31 @@ def build_router(services: AppServices) -> APIRouter:
             game = services.orchestrator.create_game(request.to_command())
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        return game_response(game)
+        return _game_response(services, game)
 
     @router.get("/games/{game_id}")
     def get_game(game_id: str) -> GameResponse:
-        return game_response(_get_game_or_404(services, game_id))
+        return _game_response(services, _get_game_or_404(services, game_id))
 
     @router.post("/games/{game_id}/start")
     def start_game(game_id: str) -> GameResponse:
-        return game_response(services.orchestrator.start_game(game_id))
+        game = services.orchestrator.start_game(game_id)
+        return _game_response(services, game)
 
     @router.post("/games/{game_id}/pause")
     def pause_game(game_id: str) -> GameResponse:
-        return game_response(services.orchestrator.pause_game(game_id))
+        game = services.orchestrator.pause_game(game_id)
+        return _game_response(services, game)
 
     @router.post("/games/{game_id}/resume")
     def resume_game(game_id: str) -> GameResponse:
-        return game_response(services.orchestrator.resume_game(game_id))
+        game = services.orchestrator.resume_game(game_id)
+        return _game_response(services, game)
 
     @router.post("/games/{game_id}/stop")
     def stop_game(game_id: str) -> GameResponse:
-        return game_response(services.orchestrator.stop_game(game_id))
+        game = services.orchestrator.stop_game(game_id)
+        return _game_response(services, game)
 
     @router.post("/games/{game_id}/step")
     def step_game(game_id: str) -> StepResponse:
@@ -122,6 +130,24 @@ def build_router(services: AppServices) -> APIRouter:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    @router.post("/games/{game_id}/human-moves/{color}")
+    def submit_human_move(
+        game_id: str,
+        color: str,
+        request: SubmitHumanMoveRequest,
+    ) -> HumanMoveResponse:
+        if color not in {"black", "white"}:
+            raise HTTPException(status_code=400, detail="color must be black or white")
+        try:
+            result = services.orchestrator.submit_human_move(
+                game_id,
+                cast(SeatColor, color),
+                request.move,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return human_move_response(result, services.orchestrator.move_status(game_id))
 
     @router.post("/games/{game_id}/autorun")
     def autorun_game(game_id: str) -> tuple[StepResponse, ...]:
@@ -207,3 +233,12 @@ def _get_game_or_404(services: AppServices, game_id: str) -> GameRecord:
         return services.repository.get_game(game_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"game not found: {game_id}") from exc
+
+
+def _game_response(services: AppServices, game: GameRecord) -> GameResponse:
+    result = services.orchestrator.resolve_pending_if_ready(game.id)
+    if result is not None:
+        game = result.game
+    if game.status == "running":
+        services.orchestrator.prime_computer_moves(game.id)
+    return game_response(game, services.orchestrator.move_status(game.id))

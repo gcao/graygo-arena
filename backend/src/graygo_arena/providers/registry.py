@@ -93,6 +93,13 @@ class ProviderCatalog:
                 models=("default",),
             ),
             ProviderInfo(
+                id="human",
+                provider="human",
+                auth_type="none",
+                configured=True,
+                models=("local",),
+            ),
+            ProviderInfo(
                 id="openai_default",
                 provider="openai_default",
                 auth_type=(
@@ -124,6 +131,13 @@ class ProviderCatalog:
         )
 
     def test_provider(self, provider: str, model: str) -> ProviderTestResult:
+        if provider == "human":
+            return ProviderTestResult(
+                provider=provider,
+                model=model,
+                ok=True,
+                message="human moves are submitted from the board",
+            )
         if provider == "openai_default" and self._settings.openai_auth_token is None:
             return ProviderTestResult(
                 provider=provider,

@@ -64,6 +64,30 @@ def test_create_start_step_get_turns_and_transcripts(tmp_path: Path) -> None:
     assert private_response.json()["entries"]
 
 
+def test_human_move_endpoint_seals_and_resolves_turn(tmp_path: Path) -> None:
+    client = client_for(tmp_path / "api.db")
+    game_id = client.post(
+        "/api/games",
+        json={
+            "black": {"provider": "human", "model": "local", "credential_ref": "human"},
+            "white": {"provider": "human", "model": "local", "credential_ref": "human"},
+            "max_turns": 5,
+        },
+    ).json()["id"]
+    client.post(f"/api/games/{game_id}/start")
+
+    black_response = client.post(f"/api/games/{game_id}/human-moves/black", json={"move": "d4"})
+    white_response = client.post(f"/api/games/{game_id}/human-moves/white", json={"move": "d5"})
+
+    assert black_response.status_code == 200
+    assert black_response.json()["turn"] is None
+    assert black_response.json()["game"]["pending_moves"]["black"]["status"] == "sealed"
+    assert white_response.status_code == 200
+    assert white_response.json()["turn"]["black_move"] == "d4"
+    assert white_response.json()["turn"]["white_move"] == "d5"
+    assert white_response.json()["game"]["current_turn"] == 1
+
+
 def test_event_endpoints_include_sse_shell_headers(tmp_path: Path) -> None:
     client = client_for(tmp_path / "api.db")
     game_id = client.post("/api/games", json={}).json()["id"]

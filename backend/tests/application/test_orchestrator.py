@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import replace
+from time import monotonic, sleep
 
 import pytest
 
@@ -9,6 +11,7 @@ from graygo_arena.application.models import (
     CreateGameCommand,
     GameEvent,
     GameRecord,
+    PendingMove,
     ProviderMoveRequest,
     ProviderMoveResponse,
     SeatConfig,
@@ -24,6 +27,7 @@ class MemoryRepository:
         self.games: dict[str, GameRecord] = {}
         self.seats: dict[str, SeatSession] = {}
         self.turns: list[TurnRecord] = []
+        self.pending_moves: list[PendingMove] = []
         self.calls: list[AgentCallRecord] = []
         self.transcripts: list[TranscriptRecord] = []
         self.events: list[GameEvent] = []
@@ -60,6 +64,32 @@ class MemoryRepository:
         return tuple(
             item.text for item in self.transcripts if item.seat_session_id == seat_session_id
         )
+
+    def save_pending_move(self, move: PendingMove) -> None:
+        self.pending_moves = [
+            item
+            for item in self.pending_moves
+            if not (
+                item.game_id == move.game_id
+                and item.turn_index == move.turn_index
+                and item.color == move.color
+            )
+        ]
+        self.pending_moves.append(move)
+
+    def get_pending_moves(self, game_id: str, turn_index: int) -> tuple[PendingMove, ...]:
+        return tuple(
+            item
+            for item in self.pending_moves
+            if item.game_id == game_id and item.turn_index == turn_index
+        )
+
+    def delete_pending_moves(self, game_id: str, turn_index: int) -> None:
+        self.pending_moves = [
+            item
+            for item in self.pending_moves
+            if not (item.game_id == game_id and item.turn_index == turn_index)
+        ]
 
     def save_turn(self, turn: TurnRecord) -> None:
         self.turns.append(turn)
@@ -218,6 +248,55 @@ def test_invalid_output_retries_once_then_forces_pass() -> None:
     assert result.black_call.parsed_move == "PASS"
     assert repo.calls[0].error is not None
     assert result.turn.black_move == "PASS"
+
+
+def test_human_vs_human_resolves_after_both_moves_are_sealed() -> None:
+    orchestrator, repo, _, _ = make_orchestrator(["d4"], ["d5"])
+    game = orchestrator.create_game(
+        command(
+            black=SeatConfig("human", "local", "human"),
+            white=SeatConfig("human", "local", "human"),
+        )
+    )
+    orchestrator.start_game(game.id)
+
+    first = orchestrator.submit_human_move(game.id, "black", "d4")
+    second = orchestrator.submit_human_move(game.id, "white", "d5")
+
+    assert first.turn is None
+    assert second.turn is not None
+    assert second.turn.black_move == "d4"
+    assert second.turn.white_move == "d5"
+    assert repo.get_game(game.id).current_turn == 1
+    assert repo.get_pending_moves(game.id, 0) == ()
+    assert repo.calls[0].provider == "human"
+
+
+def test_human_vs_computer_primes_computer_move_before_human_submit() -> None:
+    orchestrator, repo, _, white_provider = make_orchestrator(["d4"], ["d5"])
+    game = orchestrator.create_game(
+        command(black=SeatConfig("human", "local", "human"))
+    )
+
+    orchestrator.start_game(game.id)
+    _wait_for(lambda: len(repo.get_pending_moves(game.id, 0)) == 1)
+    result = orchestrator.submit_human_move(game.id, "black", "d4")
+
+    assert white_provider.requests[0].turn_index == 0
+    assert result.turn is not None
+    assert result.turn.black_move == "d4"
+    assert result.turn.white_move == "d5"
+    assert repo.get_game(game.id).board.to_key() == result.turn.post_board_key
+    _wait_for(lambda: len(repo.get_pending_moves(game.id, 1)) == 1)
+
+
+def _wait_for(condition: Callable[[], bool], timeout: float = 2.0) -> None:
+    deadline = monotonic() + timeout
+    while monotonic() < deadline:
+        if condition():
+            return
+        sleep(0.01)
+    raise AssertionError("condition was not met before timeout")
 
 
 def test_autorun_stops_at_max_turns() -> None:

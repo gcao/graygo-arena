@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
-from threading import RLock
+from threading import RLock, Thread
 from uuid import uuid4
 
 from graygo_arena.application.models import (
@@ -14,6 +14,8 @@ from graygo_arena.application.models import (
     GameRecord,
     GameRepository,
     GameStatus,
+    HumanMoveResult,
+    PendingMove,
     ProviderMoveRequest,
     ProviderMoveResponse,
     ProviderRegistry,
@@ -29,6 +31,9 @@ from graygo_arena.engine.moves import MoveLike, SeatColor
 from graygo_arena.engine.resolution import resolve_turn
 
 type IdFactory = Callable[[str], str]
+type MoveStatus = dict[SeatColor, str]
+
+HUMAN_PROVIDER = "human"
 
 
 class GameOrchestrator:
@@ -43,6 +48,7 @@ class GameOrchestrator:
         self._providers = providers
         self._id_factory = id_factory or _default_id
         self._locks: dict[str, RLock] = {}
+        self._computer_jobs: set[tuple[str, int, SeatColor]] = set()
 
     def create_game(self, command: CreateGameCommand) -> GameRecord:
         board = Board.empty(command.board_size)
@@ -69,13 +75,17 @@ class GameOrchestrator:
         return game
 
     def start_game(self, game_id: str) -> GameRecord:
-        return self._set_status(game_id, "running")
+        game = self._set_status(game_id, "running")
+        self.prime_computer_moves(game_id)
+        return game
 
     def pause_game(self, game_id: str) -> GameRecord:
         return self._set_status(game_id, "paused")
 
     def resume_game(self, game_id: str) -> GameRecord:
-        return self._set_status(game_id, "running")
+        game = self._set_status(game_id, "running")
+        self.prime_computer_moves(game_id)
+        return game
 
     def stop_game(self, game_id: str) -> GameRecord:
         return self._set_status(game_id, "stopped")
@@ -88,6 +98,12 @@ class GameOrchestrator:
                 raise ValueError(msg)
 
             black, white = self._repository.get_seats(game_id)
+            if _is_human_seat(black) or _is_human_seat(white):
+                result = self._resolve_pending_turn_locked(game, black, white)
+                if result is None:
+                    msg = "human seats require sealed moves before stepping"
+                    raise ValueError(msg)
+                return result
             pre_board = game.board
             public_history = self._repository.list_public_history(game_id)
             black_request = build_move_request(
@@ -110,79 +126,14 @@ class GameOrchestrator:
             )
             black_move, black_call = self._request_valid_move(game, black, black_request)
             white_move, white_call = self._request_valid_move(game, white, white_request)
-            resolution = resolve_turn(
-                GameState(
-                    board=game.board,
-                    forbidden=game.forbidden,
-                    double_pass_count=game.double_pass_count,
-                    turn_index=game.current_turn,
-                    ruleset=game.ruleset,
-                ),
-                black_move,
-                white_move,
-            )
-            status: GameStatus = (
-                "finished"
-                if resolution.game_finished or game.current_turn + 1 >= game.max_turns
-                else "running"
-            )
-            updated_game = replace(
+            return self._commit_turn_locked(
                 game,
-                status=status,
-                current_turn=game.current_turn + 1,
-                board=resolution.post_state.board,
-                forbidden=resolution.post_state.forbidden,
-                double_pass_count=resolution.double_pass_count,
-            )
-            turn = TurnRecord(
-                id=self._id_factory("turn"),
-                game_id=game.id,
-                turn_index=game.current_turn,
-                pre_board_key=resolution.pre_board_key,
-                post_board_key=resolution.post_board_key,
-                black_move=resolution.black_move,
-                white_move=resolution.white_move,
-                resolution=resolution,
-                status="finished" if status == "finished" else "resolved",
-            )
-            self._repository.save_agent_call(black_call)
-            self._repository.save_agent_call(white_call)
-            self._repository.save_turn(turn)
-            self._save_transcripts(
-                game.id,
-                turn.turn_index,
                 black,
                 white,
+                black_move,
+                white_move,
                 black_call,
                 white_call,
-                turn,
-            )
-            self._repository.save_game(updated_game)
-            event = self._emit(
-                game.id,
-                "turn.resolved",
-                {
-                    "turn_index": str(turn.turn_index),
-                    "black_move": turn.black_move,
-                    "white_move": turn.white_move,
-                    "post_board_key": turn.post_board_key,
-                },
-            )
-            if status == "finished":
-                finished_event = self._emit(
-                    game.id,
-                    "game.finished",
-                    {"turn_index": str(turn.turn_index)},
-                )
-                events = (event, finished_event)
-            else:
-                events = (event,)
-            return StepResult(
-                game=updated_game,
-                turn=turn,
-                black_call=black_call,
-                white_call=white_call,
-                events=events,
             )
 
     def autorun_game(self, game_id: str) -> tuple[StepResult, ...]:
@@ -193,6 +144,366 @@ class GameOrchestrator:
             results.append(result)
             game = result.game
         return tuple(results)
+
+    def submit_human_move(
+        self,
+        game_id: str,
+        color: SeatColor,
+        move_label: str,
+    ) -> HumanMoveResult:
+        should_prime_next_turn = False
+        with self._lock_for(game_id):
+            game = self._repository.get_game(game_id)
+            if game.status != "running":
+                msg = f"cannot submit a human move in status {game.status}"
+                raise ValueError(msg)
+            black, white = self._repository.get_seats(game_id)
+            seat = _seat_for_color(black, white, color)
+            if not _is_human_seat(seat):
+                msg = f"{color} is not a human seat"
+                raise ValueError(msg)
+            if any(
+                pending.color == color
+                for pending in self._repository.get_pending_moves(game.id, game.current_turn)
+            ):
+                msg = f"{color} already sealed a move for turn {game.current_turn}"
+                raise ValueError(msg)
+
+            move = _validate_move_label(game, color, move_label)
+            pending = PendingMove(
+                id=self._id_factory("pending"),
+                game_id=game.id,
+                turn_index=game.current_turn,
+                seat_session_id=seat.id,
+                color=color,
+                move=move.label,
+                source="human",
+                raw_response=f"human sealed {move.label}",
+            )
+            self._repository.save_pending_move(pending)
+            sealed_event = self._emit(
+                game.id,
+                "move.sealed",
+                {
+                    "turn_index": str(game.current_turn),
+                    "color": color,
+                    "source": "human",
+                },
+            )
+            result = self._resolve_pending_turn_locked(game, black, white)
+            if result is None:
+                response = HumanMoveResult(game=game, turn=None, events=(sealed_event,))
+            else:
+                should_prime_next_turn = (
+                    result.game.status == "running" and _has_human_and_computer(black, white)
+                )
+                response = HumanMoveResult(
+                    game=result.game,
+                    turn=result.turn,
+                    events=(sealed_event, *result.events),
+                )
+
+        if should_prime_next_turn:
+            self.prime_computer_moves(game_id)
+        return response
+
+    def move_status(self, game_id: str) -> MoveStatus:
+        with self._lock_for(game_id):
+            game = self._repository.get_game(game_id)
+            pending = self._repository.get_pending_moves(game_id, game.current_turn)
+            statuses: MoveStatus = {"black": "none", "white": "none"}
+            for move in pending:
+                statuses[move.color] = "sealed"
+            for game_key, turn_index, color in self._computer_jobs:
+                if game_key == game_id and turn_index == game.current_turn:
+                    statuses[color] = "thinking"
+            return statuses
+
+    def resolve_pending_if_ready(self, game_id: str) -> StepResult | None:
+        should_prime_next_turn = False
+        with self._lock_for(game_id):
+            game = self._repository.get_game(game_id)
+            if game.status != "running":
+                return None
+            black, white = self._repository.get_seats(game_id)
+            result = self._resolve_pending_turn_locked(game, black, white)
+            should_prime_next_turn = (
+                result is not None
+                and result.game.status == "running"
+                and _has_human_and_computer(black, white)
+            )
+
+        if should_prime_next_turn:
+            self.prime_computer_moves(game_id)
+        return result
+
+    def prime_computer_moves(self, game_id: str) -> None:
+        jobs: list[tuple[int, SeatColor]] = []
+        with self._lock_for(game_id):
+            game = self._repository.get_game(game_id)
+            if game.status != "running":
+                return
+            black, white = self._repository.get_seats(game_id)
+            if not _has_human_and_computer(black, white):
+                return
+            pending_colors = {
+                pending.color
+                for pending in self._repository.get_pending_moves(game.id, game.current_turn)
+            }
+            for seat in (black, white):
+                if _is_human_seat(seat) or seat.color in pending_colors:
+                    continue
+                job_key = (game.id, game.current_turn, seat.color)
+                if job_key in self._computer_jobs:
+                    continue
+                self._computer_jobs.add(job_key)
+                self._emit(
+                    game.id,
+                    "move.thinking",
+                    {
+                        "turn_index": str(game.current_turn),
+                        "color": seat.color,
+                    },
+                )
+                jobs.append((game.current_turn, seat.color))
+
+        for turn_index, color in jobs:
+            Thread(
+                target=self._computer_move_job,
+                args=(game_id, turn_index, color),
+                daemon=True,
+            ).start()
+
+    def _computer_move_job(self, game_id: str, turn_index: int, color: SeatColor) -> None:
+        should_prime_next_turn = False
+        try:
+            with self._lock_for(game_id):
+                game = self._repository.get_game(game_id)
+                if game.status != "running" or game.current_turn != turn_index:
+                    return
+                black, white = self._repository.get_seats(game_id)
+                seat = _seat_for_color(black, white, color)
+                if _is_human_seat(seat):
+                    return
+                if any(
+                    pending.color == color
+                    for pending in self._repository.get_pending_moves(game.id, game.current_turn)
+                ):
+                    return
+                request = self._build_move_request(game, seat)
+
+            _, call = self._request_valid_move(game, seat, request)
+
+            with self._lock_for(game_id):
+                current_game = self._repository.get_game(game_id)
+                if current_game.status != "running" or current_game.current_turn != turn_index:
+                    return
+                black, white = self._repository.get_seats(game_id)
+                pending = self._pending_from_call(current_game, seat, call)
+                self._repository.save_pending_move(pending)
+                self._emit(
+                    game_id,
+                    "move.sealed",
+                    {
+                        "turn_index": str(turn_index),
+                        "color": color,
+                        "source": "provider",
+                    },
+                )
+                result = self._resolve_pending_turn_locked(current_game, black, white)
+                should_prime_next_turn = (
+                    result is not None
+                    and result.game.status == "running"
+                    and _has_human_and_computer(black, white)
+                )
+        except Exception as exc:  # noqa: BLE001 - background provider failures must surface as game state
+            with self._lock_for(game_id):
+                game = self._repository.get_game(game_id)
+                if game.current_turn == turn_index and game.status == "running":
+                    self._repository.save_game(replace(game, status="error"))
+                    self._emit(
+                        game_id,
+                        "provider.error",
+                        {
+                            "turn_index": str(turn_index),
+                            "color": color,
+                            "detail": str(exc),
+                        },
+                    )
+        finally:
+            with self._lock_for(game_id):
+                self._computer_jobs.discard((game_id, turn_index, color))
+
+        if should_prime_next_turn:
+            self.prime_computer_moves(game_id)
+
+    def _build_move_request(self, game: GameRecord, seat: SeatSession) -> ProviderMoveRequest:
+        return build_move_request(
+            game_id=game.id,
+            seat=seat,
+            board=game.board,
+            forbidden=game.forbidden,
+            public_history=self._repository.list_public_history(game.id),
+            private_history=self._repository.list_private_history(seat.id),
+            turn_index=game.current_turn,
+        )
+
+    def _pending_from_call(
+        self,
+        game: GameRecord,
+        seat: SeatSession,
+        call: AgentCallRecord,
+    ) -> PendingMove:
+        return PendingMove(
+            id=self._id_factory("pending"),
+            game_id=game.id,
+            turn_index=game.current_turn,
+            seat_session_id=seat.id,
+            color=seat.color,
+            move=call.parsed_move,
+            source="provider",
+            raw_response=call.raw_response,
+            valid=call.valid,
+            error=call.error,
+            attempt=call.attempt,
+        )
+
+    def _resolve_pending_turn_locked(
+        self,
+        game: GameRecord,
+        black: SeatSession,
+        white: SeatSession,
+    ) -> StepResult | None:
+        pending_by_color = {
+            pending.color: pending
+            for pending in self._repository.get_pending_moves(game.id, game.current_turn)
+        }
+        black_pending = pending_by_color.get("black")
+        white_pending = pending_by_color.get("white")
+        if black_pending is None or white_pending is None:
+            return None
+
+        black_move = _validate_move_label(game, "black", black_pending.move)
+        white_move = _validate_move_label(game, "white", white_pending.move)
+        black_call = self._agent_call_from_pending(game, black, black_pending)
+        white_call = self._agent_call_from_pending(game, white, white_pending)
+        return self._commit_turn_locked(
+            game,
+            black,
+            white,
+            black_move,
+            white_move,
+            black_call,
+            white_call,
+        )
+
+    def _agent_call_from_pending(
+        self,
+        game: GameRecord,
+        seat: SeatSession,
+        pending: PendingMove,
+    ) -> AgentCallRecord:
+        return AgentCallRecord(
+            id=self._id_factory("call"),
+            game_id=game.id,
+            turn_index=game.current_turn,
+            seat_session_id=seat.id,
+            color=seat.color,
+            provider=seat.provider,
+            model=seat.model,
+            prompt_board_key=game.board.to_key(),
+            raw_response=pending.raw_response,
+            parsed_move=pending.move,
+            valid=pending.valid,
+            error=pending.error,
+            attempt=pending.attempt,
+        )
+
+    def _commit_turn_locked(
+        self,
+        game: GameRecord,
+        black: SeatSession,
+        white: SeatSession,
+        black_move: MoveLike,
+        white_move: MoveLike,
+        black_call: AgentCallRecord,
+        white_call: AgentCallRecord,
+    ) -> StepResult:
+        resolution = resolve_turn(
+            GameState(
+                board=game.board,
+                forbidden=game.forbidden,
+                double_pass_count=game.double_pass_count,
+                turn_index=game.current_turn,
+                ruleset=game.ruleset,
+            ),
+            black_move,
+            white_move,
+        )
+        status: GameStatus = (
+            "finished"
+            if resolution.game_finished or game.current_turn + 1 >= game.max_turns
+            else "running"
+        )
+        updated_game = replace(
+            game,
+            status=status,
+            current_turn=game.current_turn + 1,
+            board=resolution.post_state.board,
+            forbidden=resolution.post_state.forbidden,
+            double_pass_count=resolution.double_pass_count,
+        )
+        turn = TurnRecord(
+            id=self._id_factory("turn"),
+            game_id=game.id,
+            turn_index=game.current_turn,
+            pre_board_key=resolution.pre_board_key,
+            post_board_key=resolution.post_board_key,
+            black_move=resolution.black_move,
+            white_move=resolution.white_move,
+            resolution=resolution,
+            status="finished" if status == "finished" else "resolved",
+        )
+        self._repository.save_agent_call(black_call)
+        self._repository.save_agent_call(white_call)
+        self._repository.save_turn(turn)
+        self._save_transcripts(
+            game.id,
+            turn.turn_index,
+            black,
+            white,
+            black_call,
+            white_call,
+            turn,
+        )
+        self._repository.delete_pending_moves(game.id, game.current_turn)
+        self._repository.save_game(updated_game)
+        event = self._emit(
+            game.id,
+            "turn.resolved",
+            {
+                "turn_index": str(turn.turn_index),
+                "black_move": turn.black_move,
+                "white_move": turn.white_move,
+                "post_board_key": turn.post_board_key,
+            },
+        )
+        if status == "finished":
+            finished_event = self._emit(
+                game.id,
+                "game.finished",
+                {"turn_index": str(turn.turn_index)},
+            )
+            events = (event, finished_event)
+        else:
+            events = (event,)
+        return StepResult(
+            game=updated_game,
+            turn=turn,
+            black_call=black_call,
+            white_call=white_call,
+            events=events,
+        )
 
     def _request_valid_move(
         self,
@@ -353,6 +664,27 @@ def _seat_from_config(
     )
 
 
+def _is_human_seat(seat: SeatSession) -> bool:
+    return seat.provider == HUMAN_PROVIDER
+
+
+def _has_human_and_computer(black: SeatSession, white: SeatSession) -> bool:
+    human_count = int(_is_human_seat(black)) + int(_is_human_seat(white))
+    return human_count == 1
+
+
+def _seat_for_color(black: SeatSession, white: SeatSession, color: SeatColor) -> SeatSession:
+    return black if color == "black" else white
+
+
+def _validate_move_label(game: GameRecord, color: SeatColor, move_label: str) -> MoveLike:
+    move = parse_move(move_label, game.board_size)
+    if move not in legal_moves(game.board, color, game.forbidden):
+        msg = f"{color} move is illegal: {move_label}"
+        raise ValueError(msg)
+    return move
+
+
 def _validate_provider_response(
     game: GameRecord,
     color: SeatColor,
@@ -361,11 +693,11 @@ def _validate_provider_response(
     if response.board_key != game.board.to_key():
         msg = "provider response BoardKey does not match pre-turn BoardKey"
         raise ValueError(msg)
-    move = parse_move(response.move, game.board_size)
-    if move not in legal_moves(game.board, color, game.forbidden):
+    try:
+        return _validate_move_label(game, color, response.move)
+    except ValueError as exc:
         msg = f"provider returned illegal move: {response.move}"
-        raise ValueError(msg)
-    return move
+        raise ValueError(msg) from exc
 
 
 def _default_id(prefix: str) -> str:

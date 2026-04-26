@@ -97,6 +97,24 @@ class SQLiteDatabase:
             )
             """,
             """
+            CREATE TABLE IF NOT EXISTS pending_moves (
+              id TEXT PRIMARY KEY,
+              game_id TEXT NOT NULL,
+              turn_index INTEGER NOT NULL,
+              seat_session_id TEXT NOT NULL,
+              color TEXT NOT NULL,
+              move TEXT NOT NULL,
+              source TEXT NOT NULL,
+              raw_response TEXT NOT NULL,
+              valid INTEGER NOT NULL,
+              error TEXT,
+              attempt INTEGER NOT NULL,
+              FOREIGN KEY (game_id) REFERENCES games(id),
+              FOREIGN KEY (seat_session_id) REFERENCES seat_sessions(id),
+              UNIQUE (game_id, turn_index, color)
+            )
+            """,
+            """
             CREATE TABLE IF NOT EXISTS agent_calls (
               id TEXT PRIMARY KEY,
               game_id TEXT NOT NULL,

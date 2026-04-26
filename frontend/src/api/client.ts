@@ -6,6 +6,12 @@ export type ProviderInfo = {
   models: string[];
 };
 
+export type SeatColor = "black" | "white";
+
+export type PendingSeatMove = {
+  status: "none" | "thinking" | "sealed" | string;
+};
+
 export type SeatConfigRequest = {
   provider: string;
   credential_ref: string;
@@ -38,6 +44,7 @@ export type GameResponse = {
   white_seat_id: string;
   double_pass_count: number;
   max_turns: number;
+  pending_moves: Record<SeatColor, PendingSeatMove>;
 };
 
 export type TurnResponse = {
@@ -54,6 +61,11 @@ export type TurnResponse = {
 export type StepResponse = {
   game: GameResponse;
   turn: TurnResponse;
+};
+
+export type HumanMoveResponse = {
+  game: GameResponse;
+  turn: TurnResponse | null;
 };
 
 export type TranscriptView = "public" | "black_private" | "white_private" | "debug";
@@ -118,6 +130,17 @@ export async function stopGame(gameId: string): Promise<GameResponse> {
 
 export async function stepGame(gameId: string): Promise<StepResponse> {
   return request<StepResponse>(`/api/games/${gameId}/step`, { method: "POST" });
+}
+
+export async function submitHumanMove(
+  gameId: string,
+  color: SeatColor,
+  move: string
+): Promise<HumanMoveResponse> {
+  return request<HumanMoveResponse>(`/api/games/${gameId}/human-moves/${color}`, {
+    method: "POST",
+    body: JSON.stringify({ move })
+  });
 }
 
 export async function autorunGame(gameId: string): Promise<StepResponse[]> {

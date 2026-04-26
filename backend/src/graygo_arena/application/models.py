@@ -14,6 +14,7 @@ from graygo_arena.engine.moves import SeatColor
 
 type GameStatus = Literal["created", "running", "paused", "stopped", "finished", "error"]
 type InvalidMovePolicy = Literal["pass", "error", "forfeit"]
+type MoveSource = Literal["human", "provider"]
 type TranscriptView = Literal["public", "black_private", "white_private", "debug"]
 
 
@@ -127,6 +128,21 @@ class AgentCallRecord:
 
 
 @dataclass(frozen=True)
+class PendingMove:
+    id: str
+    game_id: str
+    turn_index: int
+    seat_session_id: str
+    color: SeatColor
+    move: str
+    source: MoveSource
+    raw_response: str
+    valid: bool = True
+    error: str | None = None
+    attempt: int = 1
+
+
+@dataclass(frozen=True)
 class TurnRecord:
     id: str
     game_id: str
@@ -166,6 +182,13 @@ class StepResult:
     events: tuple[GameEvent, ...]
 
 
+@dataclass(frozen=True)
+class HumanMoveResult:
+    game: GameRecord
+    turn: TurnRecord | None
+    events: tuple[GameEvent, ...]
+
+
 class ProviderAdapter(Protocol):
     def request_move(
         self, request: ProviderMoveRequest, seat: SeatSession
@@ -192,6 +215,12 @@ class GameRepository(Protocol):
     def list_public_history(self, game_id: str) -> tuple[str, ...]: ...
 
     def list_private_history(self, seat_session_id: str) -> tuple[str, ...]: ...
+
+    def save_pending_move(self, move: PendingMove) -> None: ...
+
+    def get_pending_moves(self, game_id: str, turn_index: int) -> tuple[PendingMove, ...]: ...
+
+    def delete_pending_moves(self, game_id: str, turn_index: int) -> None: ...
 
     def save_turn(self, turn: TurnRecord) -> None: ...
 

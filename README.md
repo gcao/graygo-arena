@@ -1,6 +1,6 @@
 # Gray Go Arena
 
-Backend-owned Gray Go arena for running isolated AI-vs-AI matches with replay, transcript, export, and guardrail checks.
+Backend-owned Gray Go arena for running isolated AI, human-vs-computer, and human-vs-human matches with replay, transcript, export, and guardrail checks.
 
 ## Run Locally
 
@@ -21,6 +21,10 @@ npm run dev
 The frontend dev server is configured in `frontend/vite.config.ts` to bind to `0.0.0.0:5174` and proxy `/api` to the backend on `127.0.0.1:8000`.
 
 The backend persists games in SQLite at `GRAYGO_DATABASE_PATH` or `.runtime/graygo.db`. The frontend stores the active game id, latest game snapshot, new-game settings, transcript view, and board display toggles in browser `localStorage`, then rehydrates the game from the backend when the browser opens again.
+
+## Human Seats
+
+Choose `human` as a seat provider to play from the shared board. In human-vs-human games, each side seals a move on the same screen; the move stays hidden until both sides have sealed and the backend resolves the turn. In human-vs-computer games, the computer seat starts thinking as soon as the turn is running, and the board resolves once the human move and computer move are both ready.
 
 ## OpenAI Credentials
 
