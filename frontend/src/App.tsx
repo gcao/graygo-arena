@@ -40,46 +40,48 @@ import { CellInspector } from "./components/CellInspector";
 import { TranscriptPanel } from "./components/TranscriptPanel";
 import { TurnAudit } from "./components/TurnAudit";
 import type { Coordinate } from "./game/board";
-
-type SeatForm = {
-  provider: string;
-  model: string;
-  credential_ref: string;
-};
-
-type GameConfigSnapshot = {
-  black: SeatForm;
-  white: SeatForm;
-};
-
-const defaultSeat: SeatForm = {
-  provider: "scripted_center",
-  model: "default",
-  credential_ref: "fake"
-};
+import {
+  isResumableGame,
+  readPersistedWorkspace,
+  writePersistedWorkspace,
+  type GameConfigSnapshot,
+  type SeatForm
+} from "./storage/workspace";
 
 export default function App() {
+  const [persistedWorkspace] = useState(readPersistedWorkspace);
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
   const [providerSettings, setProviderSettings] = useState<ProviderInfo[]>([]);
-  const [black, setBlack] = useState<SeatForm>(defaultSeat);
-  const [white, setWhite] = useState<SeatForm>({
-    provider: "scripted_pass",
-    model: "default",
-    credential_ref: "fake"
-  });
-  const [boardSize, setBoardSize] = useState(7);
-  const [maxTurns, setMaxTurns] = useState(40);
-  const [game, setGame] = useState<GameResponse | null>(null);
-  const [gameConfig, setGameConfig] = useState<GameConfigSnapshot | null>(null);
+  const [black, setBlack] = useState<SeatForm>(() => persistedWorkspace.settings.black);
+  const [white, setWhite] = useState<SeatForm>(() => persistedWorkspace.settings.white);
+  const [boardSize, setBoardSize] = useState(() => persistedWorkspace.settings.boardSize);
+  const [maxTurns, setMaxTurns] = useState(() => persistedWorkspace.settings.maxTurns);
+  const [game, setGame] = useState<GameResponse | null>(() => persistedWorkspace.game);
+  const [activeGameId, setActiveGameId] = useState<string | null>(
+    () => persistedWorkspace.activeGameId ?? persistedWorkspace.game?.id ?? null
+  );
+  const [gameConfig, setGameConfig] = useState<GameConfigSnapshot | null>(
+    () => persistedWorkspace.gameConfig
+  );
   const [turns, setTurns] = useState<TurnResponse[]>([]);
   const [guardrails, setGuardrails] = useState<GuardrailCheckResponse[]>([]);
-  const [transcriptView, setTranscriptView] = useState<TranscriptView>("public");
+  const [transcriptView, setTranscriptView] = useState<TranscriptView>(
+    () => persistedWorkspace.settings.transcriptView
+  );
   const [transcript, setTranscript] = useState<TranscriptResponse | null>(null);
   const [selected, setSelected] = useState<Coordinate | null>(null);
-  const [showNeighbors, setShowNeighbors] = useState(true);
-  const [showLastMoves, setShowLastMoves] = useState(true);
-  const [showCollisions, setShowCollisions] = useState(true);
-  const [showCaptures, setShowCaptures] = useState(true);
+  const [showNeighbors, setShowNeighbors] = useState(
+    () => persistedWorkspace.settings.display.showNeighbors
+  );
+  const [showLastMoves, setShowLastMoves] = useState(
+    () => persistedWorkspace.settings.display.showLastMoves
+  );
+  const [showCollisions, setShowCollisions] = useState(
+    () => persistedWorkspace.settings.display.showCollisions
+  );
+  const [showCaptures, setShowCaptures] = useState(
+    () => persistedWorkspace.settings.display.showCaptures
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,13 +114,73 @@ export default function App() {
         getGuardrails(gameId)
       ]);
       setGame(nextGame);
+      setActiveGameId(isResumableGame(nextGame) ? nextGame.id : null);
       setTurns(nextTurns);
       setTranscript(nextTranscript);
       setGuardrails(nextGuardrails);
     },
     [transcriptView]
   );
-  const gameId = game?.id ?? null;
+  const gameId = game?.id ?? activeGameId;
+
+  useEffect(() => {
+    const shouldPersistGame = isResumableGame(game);
+    const shouldKeepPendingGame = game === null && activeGameId !== null;
+    writePersistedWorkspace({
+      activeGameId: shouldPersistGame ? game.id : shouldKeepPendingGame ? activeGameId : null,
+      game: shouldPersistGame ? game : null,
+      gameConfig: shouldPersistGame || shouldKeepPendingGame ? gameConfig : null,
+      settings: {
+        black,
+        white,
+        boardSize,
+        maxTurns,
+        transcriptView,
+        display: {
+          showNeighbors,
+          showLastMoves,
+          showCollisions,
+          showCaptures
+        }
+      }
+    });
+  }, [
+    activeGameId,
+    black,
+    boardSize,
+    game,
+    gameConfig,
+    maxTurns,
+    showCaptures,
+    showCollisions,
+    showLastMoves,
+    showNeighbors,
+    transcriptView,
+    white
+  ]);
+
+  useEffect(() => {
+    if (!activeGameId) {
+      return undefined;
+    }
+    let cancelled = false;
+    refresh(activeGameId).catch((err: unknown) => {
+      if (cancelled) {
+        return;
+      }
+      setError(`Could not resume saved game ${activeGameId}: ${errorMessage(err)}`);
+      setActiveGameId(null);
+      setGame(null);
+      setGameConfig(null);
+      setTurns([]);
+      setTranscript(null);
+      setGuardrails([]);
+      setSelected(null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeGameId, refresh]);
 
   useEffect(() => {
     if (!gameId) {
@@ -176,7 +238,8 @@ export default function App() {
     };
     const created = await createGame(payload);
     setGame(created);
-    setGameConfig({ black, white });
+    setActiveGameId(created.id);
+    setGameConfig({ black: { ...black }, white: { ...white } });
     setTurns([]);
     setTranscript(null);
     setGuardrails([]);
@@ -188,6 +251,7 @@ export default function App() {
     if (!game) return;
     const updated = await action(game.id);
     setGame(updated);
+    setActiveGameId(isResumableGame(updated) ? updated.id : null);
     await refresh(updated.id);
   }
 
@@ -195,9 +259,11 @@ export default function App() {
     if (!game) return;
     const started = await startGame(game.id);
     setGame(started);
+    setActiveGameId(isResumableGame(started) ? started.id : null);
     if (started.status === "running" && started.current_turn === 0) {
       const result = await stepGame(started.id);
       setGame(result.game);
+      setActiveGameId(isResumableGame(result.game) ? result.game.id : null);
     }
     await refresh(started.id);
   }
@@ -206,6 +272,7 @@ export default function App() {
     if (!game) return;
     const result = await stepGame(game.id);
     setGame(result.game);
+    setActiveGameId(isResumableGame(result.game) ? result.game.id : null);
     await refresh(result.game.id);
   }
 

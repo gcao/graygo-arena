@@ -20,6 +20,8 @@ npm run dev
 
 The frontend dev server is configured in `frontend/vite.config.ts` to bind to `0.0.0.0:5174` and proxy `/api` to the backend on `127.0.0.1:8000`.
 
+The backend persists games in SQLite at `GRAYGO_DATABASE_PATH` or `.runtime/graygo.db`. The frontend stores the active game id, latest game snapshot, new-game settings, transcript view, and board display toggles in browser `localStorage`, then rehydrates the game from the backend when the browser opens again.
+
 ## OpenAI Credentials
 
 Create a repo-root `.env` file. The backend also accepts `backend/.env`, or a custom path through `GRAYGO_ENV_FILE`. `.env` files are ignored by git in this repo.
