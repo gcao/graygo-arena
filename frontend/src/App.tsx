@@ -8,10 +8,9 @@ import {
   StepForward,
   StopCircle
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
-  autorunGame,
   createGame,
   exportGame,
   getGame,
@@ -44,6 +43,17 @@ import {
   type GameConfigSnapshot,
   type SeatForm
 } from "./storage/workspace";
+
+type AutoRunMode = "idle" | "running" | "paused";
+type AutoRunCommand = "idle" | "run" | "pause" | "stop";
+
+function readAutoRunCommand(ref: { current: AutoRunCommand }): AutoRunCommand {
+  return ref.current;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => globalThis.setTimeout(resolve, ms));
+}
 
 export default function App() {
   const [persistedWorkspace] = useState(readPersistedWorkspace);
@@ -78,8 +88,16 @@ export default function App() {
   const [showCaptures, setShowCaptures] = useState(
     () => persistedWorkspace.settings.display.showCaptures
   );
+  const [autoRunMode, setAutoRunMode] = useState<AutoRunMode>("idle");
+  const autoRunCommandRef = useRef<AutoRunCommand>("idle");
+  const autoRunLoopRef = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const applyGame = useCallback((nextGame: GameResponse) => {
+    setGame(nextGame);
+    setActiveGameId(isResumableGame(nextGame) ? nextGame.id : null);
+  }, []);
 
   useEffect(() => {
     listProviders()
@@ -108,12 +126,11 @@ export default function App() {
         listTurns(gameId),
         getTranscript(gameId, view)
       ]);
-      setGame(nextGame);
-      setActiveGameId(isResumableGame(nextGame) ? nextGame.id : null);
+      applyGame(nextGame);
       setTurns(nextTurns);
       setTranscript(nextTranscript);
     },
-    [transcriptView]
+    [applyGame, transcriptView]
   );
   const gameId = game?.id ?? activeGameId;
 
@@ -185,6 +202,12 @@ export default function App() {
   }, [gameId, refresh]);
 
   const latestTurn = turns.at(-1) ?? null;
+  const displayStatus =
+    autoRunMode === "running"
+      ? "auto-run"
+      : autoRunMode === "paused"
+        ? "paused"
+        : game?.status ?? "no game";
   const sameSeatNotice =
     black.provider === white.provider && black.model === white.model
       ? "Same provider/model selected; backend will create isolated Black and White seat sessions."
@@ -239,39 +262,106 @@ export default function App() {
     await refresh(created.id);
   }
 
-  async function handleLifecycle(action: (gameId: string) => Promise<GameResponse>) {
-    if (!game) return;
-    const updated = await action(game.id);
-    setGame(updated);
-    setActiveGameId(isResumableGame(updated) ? updated.id : null);
-    await refresh(updated.id);
-  }
-
   async function handleStart() {
     if (!game) return;
     const started = await startGame(game.id);
-    setGame(started);
-    setActiveGameId(isResumableGame(started) ? started.id : null);
-    if (started.status === "running" && started.current_turn === 0) {
-      const result = await stepGame(started.id);
-      setGame(result.game);
-      setActiveGameId(isResumableGame(result.game) ? result.game.id : null);
-    }
+    applyGame(started);
     await refresh(started.id);
   }
 
   async function handleStep() {
     if (!game) return;
     const result = await stepGame(game.id);
-    setGame(result.game);
-    setActiveGameId(isResumableGame(result.game) ? result.game.id : null);
+    applyGame(result.game);
     await refresh(result.game.id);
   }
 
   async function handleAutorun() {
+    if (!game || autoRunLoopRef.current) return;
+    autoRunCommandRef.current = "run";
+    autoRunLoopRef.current = true;
+    setAutoRunMode("running");
+    setError(null);
+    let currentGame = game;
+    try {
+      currentGame = await ensureRunning(currentGame);
+      while (readAutoRunCommand(autoRunCommandRef) === "run" && currentGame.status === "running") {
+        const result = await stepGame(currentGame.id);
+        currentGame = result.game;
+        applyGame(currentGame);
+        await refresh(currentGame.id);
+        if (readAutoRunCommand(autoRunCommandRef) === "pause") {
+          const paused = await pauseGame(currentGame.id);
+          applyGame(paused);
+          setAutoRunMode("paused");
+          await refresh(paused.id);
+          return;
+        }
+        if (readAutoRunCommand(autoRunCommandRef) === "stop") {
+          const stopped = await stopGame(currentGame.id);
+          applyGame(stopped);
+          setAutoRunMode("idle");
+          await refresh(stopped.id);
+          return;
+        }
+        if (currentGame.status === "running") {
+          await delay(250);
+        }
+      }
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      autoRunLoopRef.current = false;
+      if (readAutoRunCommand(autoRunCommandRef) !== "pause") {
+        setAutoRunMode("idle");
+        autoRunCommandRef.current = "idle";
+      }
+    }
+  }
+
+  async function ensureRunning(currentGame: GameResponse): Promise<GameResponse> {
+    if (currentGame.status === "created") {
+      const started = await startGame(currentGame.id);
+      applyGame(started);
+      await refresh(started.id);
+      return started;
+    }
+    if (currentGame.status === "paused") {
+      const resumed = await resumeGame(currentGame.id);
+      applyGame(resumed);
+      await refresh(resumed.id);
+      return resumed;
+    }
+    return currentGame;
+  }
+
+  async function handlePause() {
     if (!game) return;
-    await autorunGame(game.id);
-    await refresh(game.id);
+    autoRunCommandRef.current = "pause";
+    const paused = await pauseGame(game.id);
+    applyGame(paused);
+    setAutoRunMode("paused");
+    await refresh(paused.id);
+  }
+
+  async function handleResume() {
+    if (!game) return;
+    if (autoRunMode === "paused") {
+      void handleAutorun();
+      return;
+    }
+    const resumed = await resumeGame(game.id);
+    applyGame(resumed);
+    await refresh(resumed.id);
+  }
+
+  async function handleStop() {
+    if (!game) return;
+    autoRunCommandRef.current = "stop";
+    const stopped = await stopGame(game.id);
+    applyGame(stopped);
+    setAutoRunMode("idle");
+    await refresh(stopped.id);
   }
 
   async function changeTranscriptView(view: TranscriptView) {
@@ -302,7 +392,7 @@ export default function App() {
             <h1>Gray Go Arena</h1>
             <p>Backend-authoritative AI match console</p>
           </div>
-          <span className="status-chip">{game?.status ?? "no game"}</span>
+          <span className="status-chip">{displayStatus}</span>
         </div>
 
         <section className="panel">
@@ -354,29 +444,45 @@ export default function App() {
 
         <section className="panel">
           <h2>Controls</h2>
-          <div className="control-grid">
-            <IconButton disabled={!game || busy} label="Start" onClick={() => runAction(handleStart)}>
-              <Play size={16} />
-            </IconButton>
-            <IconButton disabled={!game || busy} label="Step" onClick={() => runAction(handleStep)}>
-              <StepForward size={16} />
-            </IconButton>
-            <IconButton disabled={!game || busy} label="Auto-run" onClick={() => runAction(handleAutorun)}>
-              <Activity size={16} />
-            </IconButton>
-            <IconButton disabled={!game || busy} label="Pause" onClick={() => runAction(() => handleLifecycle(pauseGame))}>
-              <Pause size={16} />
-            </IconButton>
-            <IconButton disabled={!game || busy} label="Resume" onClick={() => runAction(() => handleLifecycle(resumeGame))}>
-              <RefreshCw size={16} />
-            </IconButton>
-            <IconButton disabled={!game || busy} label="Stop" onClick={() => runAction(() => handleLifecycle(stopGame))}>
-              <StopCircle size={16} />
-            </IconButton>
-            <IconButton disabled={!game || busy} label="Export" onClick={() => runAction(exportBackendBundle)}>
-              <Download size={16} />
-            </IconButton>
-          </div>
+          {game ? (
+            <div className="control-grid">
+              {game.status === "created" ? (
+                <IconButton disabled={busy} label="Start" onClick={() => runAction(handleStart)}>
+                  <Play size={16} />
+                </IconButton>
+              ) : null}
+              {game.status === "running" && autoRunMode === "idle" ? (
+                <>
+                  <IconButton disabled={busy} label="Step" onClick={() => runAction(handleStep)}>
+                    <StepForward size={16} />
+                  </IconButton>
+                  <IconButton disabled={busy} label="Auto-run" onClick={() => void handleAutorun()}>
+                    <Activity size={16} />
+                  </IconButton>
+                </>
+              ) : null}
+              {autoRunMode === "running" ? (
+                <IconButton disabled={busy} label="Pause" onClick={() => runAction(handlePause)}>
+                  <Pause size={16} />
+                </IconButton>
+              ) : null}
+              {game.status === "paused" || autoRunMode === "paused" ? (
+                <IconButton disabled={busy} label="Resume" onClick={() => runAction(handleResume)}>
+                  <RefreshCw size={16} />
+                </IconButton>
+              ) : null}
+              {game.status === "running" || game.status === "paused" || autoRunMode !== "idle" ? (
+                <IconButton disabled={busy} label="Stop" onClick={() => runAction(handleStop)}>
+                  <StopCircle size={16} />
+                </IconButton>
+              ) : null}
+              <IconButton disabled={busy} label="Export" onClick={() => runAction(exportBackendBundle)}>
+                <Download size={16} />
+              </IconButton>
+            </div>
+          ) : (
+            <p className="muted control-empty">Create a game to show match controls.</p>
+          )}
           {error ? <p className="error-text">{error}</p> : null}
         </section>
       </aside>

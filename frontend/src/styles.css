@@ -189,6 +189,10 @@ select {
   margin-top: 0.75rem;
 }
 
+.control-empty {
+  margin-top: 0.75rem;
+}
+
 .tool-button {
   background: #ffffff;
   color: #18241f;
