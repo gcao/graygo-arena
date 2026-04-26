@@ -9,8 +9,8 @@ export function CellInspector({ board, selected }: CellInspectorProps) {
   if (!selected) {
     return (
       <section className="panel">
-        <h2>Cell Inspector</h2>
-        <p className="muted">Select a board cell.</p>
+        <h2>Point Inspector</h2>
+        <p className="muted">Select a board point.</p>
       </section>
     );
   }
@@ -19,7 +19,7 @@ export function CellInspector({ board, selected }: CellInspectorProps) {
   );
   return (
     <section className="panel">
-      <h2>Cell Inspector</h2>
+      <h2>Point Inspector</h2>
       <dl className="kv-list">
         <div>
           <dt>Coordinate</dt>

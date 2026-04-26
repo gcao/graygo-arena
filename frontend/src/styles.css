@@ -224,72 +224,195 @@ select {
 }
 
 .board-grid {
+  --point-size: clamp(2.4rem, 6.2vmin, 3.9rem);
   display: grid;
-  gap: 0.25rem;
-  max-width: min(100%, 42rem);
+  gap: 0.12rem;
+  max-width: 100%;
+  width: max-content;
+}
+
+.board-col-axis {
+  display: grid;
+}
+
+.board-body {
+  align-items: start;
+  display: grid;
+  grid-template-columns: 2rem auto;
+}
+
+.board-row-axis {
+  display: grid;
 }
 
 .board-axis {
   align-items: center;
-  color: #65736f;
+  color: #5e6b67;
   display: flex;
   font-size: 0.78rem;
   font-weight: 700;
   justify-content: center;
-  min-height: 2.4rem;
+  min-height: var(--point-size);
+  min-width: 2rem;
+  user-select: none;
 }
 
-.board-cell {
-  aspect-ratio: 1;
-  border: 1px solid #cbd5d1;
-  border-radius: 6px;
-  color: #17201d;
-  font-weight: 800;
-  min-width: 2.4rem;
-  outline: 0;
+.go-board {
+  background:
+    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.38), transparent 28%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent 42%),
+    #d1ab67;
+  border: 1px solid #806132;
+  border-radius: 8px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    inset 0 0 1.4rem rgba(92, 59, 18, 0.22),
+    0 0.8rem 1.6rem rgba(35, 43, 39, 0.12);
+  display: grid;
+  isolation: isolate;
+  overflow: hidden;
   position: relative;
 }
 
-.cell-empty {
-  background: #f8faf9;
-  color: #9aa7a3;
+.board-point {
+  align-items: center;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: transparent;
+  display: grid;
+  height: var(--point-size);
+  justify-items: center;
+  min-height: 0;
+  min-width: 0;
+  outline: 0;
+  padding: 0;
+  position: relative;
+  width: var(--point-size);
 }
 
-.cell-b {
-  background: #17201d;
-  color: #ffffff;
+.board-point::before,
+.board-point::after {
+  background: rgba(46, 40, 28, 0.7);
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
 }
 
-.cell-w {
-  background: #ffffff;
-  color: #17201d;
+.board-point::before {
+  height: 1px;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-0.5px);
 }
 
-.cell-g {
-  background: #87908c;
-  color: #ffffff;
+.board-point::after {
+  bottom: 0;
+  left: 50%;
+  top: 0;
+  transform: translateX(-0.5px);
+  width: 1px;
 }
 
-.board-cell.is-selected {
-  border-color: #0f766e;
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.2);
+.board-point:hover::before,
+.board-point:hover::after,
+.board-point:focus-visible::before,
+.board-point:focus-visible::after {
+  background: rgba(18, 32, 27, 0.9);
 }
 
-.board-cell.is-neighbor {
-  border-color: #0f766e;
+.go-stone {
+  border-radius: 50%;
+  display: block;
+  height: calc(var(--point-size) * 0.72);
+  position: relative;
+  width: calc(var(--point-size) * 0.72);
+  z-index: 2;
 }
 
-.board-cell.is-black-move,
-.board-cell.is-white-move {
-  box-shadow: inset 0 0 0 3px #f59e0b;
+.point-b .go-stone {
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255, 255, 255, 0.32), transparent 0.42rem),
+    radial-gradient(circle at 48% 52%, #27302c, #0d1110 68%, #020303 100%);
+  box-shadow:
+    inset -0.22rem -0.28rem 0.42rem rgba(0, 0, 0, 0.55),
+    inset 0.16rem 0.12rem 0.26rem rgba(255, 255, 255, 0.08),
+    0 0.28rem 0.42rem rgba(0, 0, 0, 0.28);
 }
 
-.board-cell.is-collision {
-  box-shadow: inset 0 0 0 3px #0f766e;
+.point-w .go-stone {
+  background:
+    radial-gradient(circle at 34% 24%, #ffffff, transparent 0.46rem),
+    radial-gradient(circle at 52% 58%, #f8faf8, #dfe6e1 70%, #b8c2bd 100%);
+  box-shadow:
+    inset -0.18rem -0.22rem 0.4rem rgba(95, 110, 102, 0.24),
+    inset 0.16rem 0.12rem 0.28rem rgba(255, 255, 255, 0.8),
+    0 0.25rem 0.4rem rgba(30, 42, 37, 0.2);
 }
 
-.board-cell.is-capture {
-  border-color: #be123c;
+.point-g .go-stone {
+  background:
+    radial-gradient(circle at 34% 24%, rgba(255, 255, 255, 0.44), transparent 0.44rem),
+    radial-gradient(circle at 52% 58%, #9ca7a1, #707b76 72%, #4e5753 100%);
+  box-shadow:
+    inset -0.2rem -0.24rem 0.38rem rgba(0, 0, 0, 0.22),
+    inset 0.14rem 0.12rem 0.26rem rgba(255, 255, 255, 0.18),
+    0 0.25rem 0.4rem rgba(30, 42, 37, 0.2);
+}
+
+.point-indicator {
+  border-radius: 50%;
+  display: block;
+  height: calc(var(--point-size) * 0.28);
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  width: calc(var(--point-size) * 0.28);
+  z-index: 3;
+}
+
+.board-point.is-neighbor .point-indicator {
+  background: rgba(15, 118, 110, 0.48);
+  opacity: 1;
+}
+
+.board-point.is-selected .point-indicator,
+.board-point:focus-visible .point-indicator {
+  background: transparent;
+  border: 2px solid #0f766e;
+  height: calc(var(--point-size) * 0.88);
+  opacity: 1;
+  width: calc(var(--point-size) * 0.88);
+}
+
+.board-point.is-black-move .point-indicator,
+.board-point.is-white-move .point-indicator {
+  background: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.72);
+  height: calc(var(--point-size) * 0.2);
+  opacity: 1;
+  width: calc(var(--point-size) * 0.2);
+}
+
+.board-point.is-collision .point-indicator {
+  background: transparent;
+  border: 3px solid #0f766e;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.58);
+  height: calc(var(--point-size) * 0.58);
+  opacity: 1;
+  width: calc(var(--point-size) * 0.58);
+}
+
+.board-point.is-capture .point-indicator {
+  background: transparent;
+  border: 3px solid #be123c;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6);
+  height: calc(var(--point-size) * 0.66);
+  opacity: 1;
+  width: calc(var(--point-size) * 0.66);
 }
 
 .empty-board {
