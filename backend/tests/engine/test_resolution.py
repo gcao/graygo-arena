@@ -75,6 +75,32 @@ def test_capture_removes_zero_liberty_group() -> None:
     assert captured_labels == ("b2",)
 
 
+def test_capture_removes_zero_liberty_gray_group_without_forbidden_update() -> None:
+    state = GameState(
+        board=Board.from_key(
+            "+++++++/+WWG+++/+BWBBB+/+BGGWW+/++WBBW+/+++GBB+/+++WW++"
+        )
+    )
+
+    resolution = resolve_turn(state, PassMove(), PassMove())
+
+    assert (
+        resolution.post_board_key
+        == "+++++++/+WWG+++/+BWBBB+/+B++WW+/++WBBW+/+++GBB+/+++WW++"
+    )
+    assert len(resolution.captures) == 1
+    capture = resolution.captures[0]
+    assert capture.captured_color == "gray"
+    assert capture.by_color == "neutral"
+    assert tuple(coordinate.to_label() for coordinate in capture.coordinates) == (
+        "d3",
+        "d4",
+    )
+    assert resolution.forbidden_updates == ()
+    assert not resolution.post_state.forbidden.black
+    assert not resolution.post_state.forbidden.white
+
+
 def test_capture_creates_color_specific_forbidden_update() -> None:
     state = GameState(board=Board.from_key("+B+/BW+/+B+"))
 

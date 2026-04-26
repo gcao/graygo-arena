@@ -20,6 +20,8 @@ from graygo_arena.application.models import (
 )
 from graygo_arena.engine import (
     Board,
+    CaptureByColor,
+    CapturedColor,
     CaptureEvent,
     Coordinate,
     ForbiddenState,
@@ -506,8 +508,8 @@ def _resolution_from_json(
     )
     captures = tuple(
         CaptureEvent(
-            captured_color=cast(SeatColor, capture["captured_color"]),
-            by_color=cast(SeatColor, capture["by_color"]),
+            captured_color=cast(CapturedColor, capture["captured_color"]),
+            by_color=cast(CaptureByColor, capture["by_color"]),
             coordinates=tuple(
                 Coordinate.parse(label, Board.from_key(post_board_key).size)
                 for label in cast(list[str], capture["coordinates"])

@@ -19,6 +19,8 @@ from graygo_arena.engine.rules import groups_for_cell, liberties
 from graygo_arena.engine.scoring import score_board
 
 type PlacementEventType = Literal["placement", "collision"]
+type CapturedColor = Literal["black", "white", "gray"]
+type CaptureByColor = Literal["black", "white", "neutral"]
 type Ruleset = Literal["graygo-v1"]
 
 DOUBLE_PASS_FINISH_THRESHOLD = 1
@@ -59,8 +61,8 @@ class PlacementEvent:
 
 @dataclass(frozen=True)
 class CaptureEvent:
-    captured_color: SeatColor
-    by_color: SeatColor
+    captured_color: CapturedColor
+    by_color: CaptureByColor
     coordinates: tuple[Coordinate, ...]
 
 
@@ -177,9 +179,10 @@ def _apply_simultaneous_placements(
 
 def _apply_captures(board: Board) -> tuple[Board, tuple[CaptureEvent, ...]]:
     captures: list[CaptureEvent] = []
-    capture_specs: tuple[tuple[Cell, SeatColor, SeatColor], ...] = (
+    capture_specs: tuple[tuple[Cell, CapturedColor, CaptureByColor], ...] = (
         ("W", "white", "black"),
         ("B", "black", "white"),
+        ("G", "gray", "neutral"),
     )
     for captured_cell, captured_color, by_color in capture_specs:
         captured_coordinates = _zero_liberty_coordinates(board, captured_cell)
@@ -215,6 +218,8 @@ def _forbidden_from_captures(
     updates: list[ForbiddenUpdate] = []
 
     for capture in captures:
+        if capture.captured_color == "gray":
+            continue
         coordinates = tuple(sorted(capture.coordinates))
         if capture.captured_color == "black":
             black_forbidden.update(coordinates)

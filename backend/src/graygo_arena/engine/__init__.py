@@ -4,6 +4,8 @@ from graygo_arena.engine.board import Board, Cell
 from graygo_arena.engine.coordinates import Coordinate
 from graygo_arena.engine.moves import ForbiddenState, Move, PassMove, legal_moves, parse_move
 from graygo_arena.engine.resolution import (
+    CaptureByColor,
+    CapturedColor,
     CaptureEvent,
     ForbiddenUpdate,
     GameState,
@@ -16,7 +18,9 @@ from graygo_arena.engine.scoring import score_board
 
 __all__ = [
     "Board",
+    "CaptureByColor",
     "CaptureEvent",
+    "CapturedColor",
     "Cell",
     "Coordinate",
     "ForbiddenState",
