@@ -460,8 +460,7 @@ pre {
 }
 
 .seat-summary,
-.settings-list,
-.guardrail-list {
+.settings-list {
   display: grid;
   gap: 0.6rem;
   margin-top: 0.75rem;
@@ -481,8 +480,7 @@ pre {
 }
 
 .settings-row,
-.guardrail-ok,
-.guardrail-fail {
+.settings-row {
   border: 1px solid #d8dfdc;
   border-radius: 8px;
   display: grid;
@@ -495,23 +493,12 @@ pre {
 }
 
 .settings-row span,
-.settings-row strong,
-.guardrail-ok span,
-.guardrail-fail span {
+.settings-row strong {
   font-size: 0.78rem;
 }
 
-.settings-row strong,
-.guardrail-ok strong {
+.settings-row strong {
   color: #0f766e;
-}
-
-.guardrail-fail {
-  border-color: #f2a7b8;
-}
-
-.guardrail-fail strong {
-  color: #be123c;
 }
 
 .audit-summary,

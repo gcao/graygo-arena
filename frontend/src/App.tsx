@@ -4,7 +4,6 @@ import {
   Pause,
   Play,
   RefreshCw,
-  ShieldCheck,
   Square,
   StepForward,
   StopCircle
@@ -16,7 +15,6 @@ import {
   createGame,
   exportGame,
   getGame,
-  getGuardrails,
   getProviderSettings,
   getTranscript,
   listProviders,
@@ -28,7 +26,6 @@ import {
   stopGame,
   type CreateGameRequest,
   type GameResponse,
-  type GuardrailCheckResponse,
   type ProviderInfo,
   type TranscriptResponse,
   type TranscriptView,
@@ -64,7 +61,6 @@ export default function App() {
     () => persistedWorkspace.gameConfig
   );
   const [turns, setTurns] = useState<TurnResponse[]>([]);
-  const [guardrails, setGuardrails] = useState<GuardrailCheckResponse[]>([]);
   const [transcriptView, setTranscriptView] = useState<TranscriptView>(
     () => persistedWorkspace.settings.transcriptView
   );
@@ -107,17 +103,15 @@ export default function App() {
 
   const refresh = useCallback(
     async (gameId: string, view = transcriptView) => {
-      const [nextGame, nextTurns, nextTranscript, nextGuardrails] = await Promise.all([
+      const [nextGame, nextTurns, nextTranscript] = await Promise.all([
         getGame(gameId),
         listTurns(gameId),
-        getTranscript(gameId, view),
-        getGuardrails(gameId)
+        getTranscript(gameId, view)
       ]);
       setGame(nextGame);
       setActiveGameId(isResumableGame(nextGame) ? nextGame.id : null);
       setTurns(nextTurns);
       setTranscript(nextTranscript);
-      setGuardrails(nextGuardrails);
     },
     [transcriptView]
   );
@@ -174,7 +168,6 @@ export default function App() {
       setGameConfig(null);
       setTurns([]);
       setTranscript(null);
-      setGuardrails([]);
       setSelected(null);
     });
     return () => {
@@ -242,7 +235,6 @@ export default function App() {
     setGameConfig({ black: { ...black }, white: { ...white } });
     setTurns([]);
     setTranscript(null);
-    setGuardrails([]);
     setSelected(null);
     await refresh(created.id);
   }
@@ -448,24 +440,6 @@ export default function App() {
         </div>
 
         <TurnAudit turns={turns} />
-        <section className="panel guardrail-panel">
-          <div className="panel-heading">
-            <h2>Guardrails</h2>
-            <ShieldCheck size={18} />
-          </div>
-          <div className="guardrail-list">
-            {guardrails.length ? (
-              guardrails.map((check) => (
-                <div className={check.ok ? "guardrail-ok" : "guardrail-fail"} key={check.name}>
-                  <strong>{check.name.replaceAll("_", " ")}</strong>
-                  <span>{check.detail}</span>
-                </div>
-              ))
-            ) : (
-              <p className="muted">Create and step a game to run guardrails.</p>
-            )}
-          </div>
-        </section>
         <TranscriptPanel
           onViewChange={(view) => void changeTranscriptView(view)}
           transcript={transcript}
