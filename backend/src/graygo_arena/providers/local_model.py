@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import json
 import os
@@ -59,6 +60,10 @@ class GrayGoTrainedProvider:
                 f"graygo_trained supports {self._board_size}x{self._board_size} boards, "
                 f"got {len(request.board_rows)}x{len(request.board_rows)}"
             )
+        if self._runner is None and not self._model_path.is_file():
+            raise ProviderServiceError(f"graygo_trained model not found: {self._model_path}")
+        if request.turn_index == 0:
+            return self._opening_move(request, seat)
         if self._runner:
             logits = tuple(self._runner(request, seat))
         else:
@@ -69,17 +74,18 @@ class GrayGoTrainedProvider:
                 f"graygo_trained model returned {len(logits)} policy logits, "
                 f"expected {expected_logits}"
             )
-        move, score = _select_legal_move(logits, request.legal_moves, self._board_size)
+        selection = _select_legal_move(logits, request, seat, self._board_size)
         raw = {
             "provider": "graygo_trained",
             "model_path": str(self._model_path),
             "board_key": request.board_key,
-            "move": move,
-            "policy_logit": score,
+            "move": selection.move,
+            "policy_logit": selection.score,
+            "policy_tie_count": selection.tie_count,
         }
         return ProviderMoveResponse(
             board_key=request.board_key,
-            move=move,
+            move=selection.move,
             raw_response=json.dumps(raw, sort_keys=True),
             strategic_summary=(
                 "Selected the highest-logit legal move from the trained GrayGoNet policy."
@@ -88,6 +94,42 @@ class GrayGoTrainedProvider:
                 "model_path": str(self._model_path),
                 "graygo_repo": str(self._graygo_repo),
                 "board_size": str(self._board_size),
+            },
+        )
+
+    def _opening_move(
+        self,
+        request: ProviderMoveRequest,
+        seat: SeatSession,
+    ) -> ProviderMoveResponse:
+        candidates = tuple(move for move in request.legal_moves if move != "PASS")
+        move = _choose_seeded_move(
+            candidates or ("PASS",),
+            (
+                "opening",
+                request.game_id,
+                request.board_key,
+            ),
+            seat.color,
+        )
+        raw = {
+            "provider": "graygo_trained",
+            "model_path": str(self._model_path),
+            "board_key": request.board_key,
+            "move": move,
+            "opening_randomized": True,
+            "opening_pool_count": len(candidates),
+        }
+        return ProviderMoveResponse(
+            board_key=request.board_key,
+            move=move,
+            raw_response=json.dumps(raw, sort_keys=True),
+            strategic_summary="Randomized the trained model's first move.",
+            metadata={
+                "model_path": str(self._model_path),
+                "graygo_repo": str(self._graygo_repo),
+                "board_size": str(self._board_size),
+                "selection": "opening_randomized",
             },
         )
 
@@ -270,16 +312,63 @@ def _plane_for_cell(cell: str, own_cell: str, opponent_cell: str) -> int:
     raise ProviderServiceError(f"unsupported board cell for graygo_trained: {cell}")
 
 
+class MoveSelection:
+    def __init__(self, *, move: str, score: float, tie_count: int) -> None:
+        self.move = move
+        self.score = score
+        self.tie_count = tie_count
+
+
 def _select_legal_move(
     logits: Sequence[float],
-    legal_moves: tuple[str, ...],
+    request: ProviderMoveRequest,
+    seat: SeatSession,
     board_size: int,
-) -> tuple[str, float]:
+) -> MoveSelection:
+    legal_moves = request.legal_moves
     if not legal_moves:
-        return "PASS", float("-inf")
+        return MoveSelection(move="PASS", score=float("-inf"), tie_count=0)
+
     scored = tuple((_action_logit(logits, move, board_size), move) for move in legal_moves)
-    score, move = max(scored, key=lambda item: item[0])
-    return move, float(score)
+    best_score = max(score for score, _move in scored)
+    best_moves = tuple(move for score, move in scored if score == best_score)
+    return MoveSelection(
+        move=_choose_tied_move(best_moves, request, seat),
+        score=float(best_score),
+        tie_count=len(best_moves),
+    )
+
+
+def _choose_tied_move(
+    moves: tuple[str, ...],
+    request: ProviderMoveRequest,
+    seat: SeatSession,
+) -> str:
+    if len(moves) == 1:
+        return moves[0]
+    return _choose_seeded_move(
+        moves,
+        (
+            "tie",
+            request.game_id,
+            str(request.turn_index),
+            request.board_key,
+        ),
+        seat.color,
+    )
+
+
+def _choose_seeded_move(
+    moves: tuple[str, ...],
+    seed_parts: tuple[str, ...],
+    color: str,
+) -> str:
+    seed = "|".join(seed_parts)
+    digest = hashlib.sha256(seed.encode("utf-8")).digest()
+    index = int.from_bytes(digest[:8], "big") % len(moves)
+    if color == "white" and len(moves) > 1:
+        index = (index + max(1, len(moves) // 2)) % len(moves)
+    return moves[index]
 
 
 def _action_logit(logits: Sequence[float], move: str, board_size: int) -> float:

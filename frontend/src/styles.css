@@ -287,6 +287,10 @@ select {
   width: max-content;
 }
 
+.board-grid.is-virtual-board {
+  --point-size: clamp(1.75rem, 4.35vmin, 2.75rem);
+}
+
 .board-col-axis {
   display: grid;
 }
@@ -342,6 +346,10 @@ select {
   width: var(--point-size);
 }
 
+.board-point.is-virtual-margin {
+  background: rgba(255, 255, 255, 0.16);
+}
+
 .board-point::before,
 .board-point::after {
   background: rgba(46, 40, 28, 0.7);
@@ -365,6 +373,11 @@ select {
   top: 0;
   transform: translateX(-0.5px);
   width: 1px;
+}
+
+.board-point.is-virtual-margin::before,
+.board-point.is-virtual-margin::after {
+  background: rgba(46, 40, 28, 0.44);
 }
 
 .board-point:hover::before,

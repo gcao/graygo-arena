@@ -44,6 +44,8 @@ GRAYGO_MODEL_BOARD_SIZE=9
 
 The arena backend does not need PyTorch installed in its own Python environment. If PyTorch is unavailable there, the provider runs inference through `GRAYGO_MODEL_PYTHON`, which should point at the training repo environment.
 
+For trained-model seats, turn 0 is randomized from legal placements so same-model matches do not start from identical deterministic policy choices. From turn 1 onward, moves come from the model policy.
+
 ## OpenAI Credentials
 
 Create a repo-root `.env` file. The backend also accepts `backend/.env`, or a custom path through `GRAYGO_ENV_FILE`. `.env` files are ignored by git in this repo.

@@ -21,12 +21,16 @@ export function parseCoordinate(label: string): Coordinate | null {
   return { row, col };
 }
 
+export function wrapBoardIndex(index: number, size: number): number {
+  return ((index % size) + size) % size;
+}
+
 export function toroidalNeighbors(coordinate: Coordinate, size: number): Coordinate[] {
   return [
-    { row: (coordinate.row - 1 + size) % size, col: coordinate.col },
-    { row: (coordinate.row + 1) % size, col: coordinate.col },
-    { row: coordinate.row, col: (coordinate.col - 1 + size) % size },
-    { row: coordinate.row, col: (coordinate.col + 1) % size }
+    { row: wrapBoardIndex(coordinate.row - 1, size), col: coordinate.col },
+    { row: wrapBoardIndex(coordinate.row + 1, size), col: coordinate.col },
+    { row: coordinate.row, col: wrapBoardIndex(coordinate.col - 1, size) },
+    { row: coordinate.row, col: wrapBoardIndex(coordinate.col + 1, size) }
   ];
 }
 

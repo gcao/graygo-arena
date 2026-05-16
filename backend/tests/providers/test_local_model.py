@@ -16,6 +16,7 @@ def request9(
     *,
     board_rows: tuple[str, ...] | None = None,
     legal_moves: tuple[str, ...] = ("a1", "e5", "PASS"),
+    turn_index: int = 1,
 ) -> ProviderMoveRequest:
     rows = board_rows or tuple("+" * 9 for _ in range(9))
     return ProviderMoveRequest(
@@ -28,7 +29,7 @@ def request9(
         legal_moves=legal_moves,
         public_history=(),
         private_history=(),
-        turn_index=0,
+        turn_index=turn_index,
     )
 
 
@@ -72,6 +73,60 @@ def test_graygo_trained_ignores_illegal_high_logits() -> None:
     response = provider.request_move(request9(legal_moves=("a1", "PASS")), seat())
 
     assert response.move == "PASS"
+
+
+def test_graygo_trained_randomizes_first_move_without_running_model() -> None:
+    calls = 0
+
+    def runner(_request: ProviderMoveRequest, _seat: SeatSession) -> list[float]:
+        nonlocal calls
+        calls += 1
+        return [0.0] * 82
+
+    provider = GrayGoTrainedProvider(
+        model_path=Path("/missing/champion_traced.pt"),
+        runner=runner,
+    )
+    legal_moves = ("a1", "a2", "a3", "a4", "PASS")
+
+    black_response = provider.request_move(
+        request9(legal_moves=legal_moves, turn_index=0),
+        seat("black"),
+    )
+    white_response = provider.request_move(
+        replace(
+            request9(legal_moves=legal_moves, turn_index=0),
+            seat_session_id="seat_white",
+            color="white",
+        ),
+        seat("white"),
+    )
+
+    assert calls == 0
+    assert black_response.move == "a3"
+    assert white_response.move == "a1"
+    assert black_response.move in legal_moves
+    assert white_response.move in legal_moves
+    assert black_response.move != "PASS"
+    assert '"opening_randomized": true' in black_response.raw_response
+
+
+def test_graygo_trained_breaks_equal_logit_ties_by_seat() -> None:
+    provider = GrayGoTrainedProvider(
+        model_path=Path("/missing/champion_traced.pt"),
+        runner=lambda _request, _seat: [1.0] * 82,
+    )
+    legal_moves = ("a1", "a2", "a3", "a4", "PASS")
+
+    black_response = provider.request_move(request9(legal_moves=legal_moves), seat("black"))
+    white_response = provider.request_move(
+        replace(request9(legal_moves=legal_moves), seat_session_id="seat_white", color="white"),
+        seat("white"),
+    )
+
+    assert black_response.move == "a1"
+    assert white_response.move == "a3"
+    assert '"policy_tie_count": 5' in black_response.raw_response
 
 
 def test_graygo_trained_encodes_player_relative_planes_and_forbidden_points() -> None:
