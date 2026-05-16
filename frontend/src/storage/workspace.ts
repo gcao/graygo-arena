@@ -69,7 +69,7 @@ const defaultWorkspace: PersistedWorkspace = {
   settings: {
     black: defaultBlackSeat,
     white: defaultWhiteSeat,
-    boardSize: 7,
+    boardSize: 9,
     maxTurns: 40,
     transcriptView: "public",
     display: defaultDisplaySettings
@@ -135,7 +135,7 @@ function normalizeSettings(value: unknown): WorkspaceSettings {
   return {
     black: normalizeSeat(record.black, defaultBlackSeat),
     white: normalizeSeat(record.white, defaultWhiteSeat),
-    boardSize: clampNumber(record.boardSize, 7, 3, 13),
+    boardSize: clampNumber(record.boardSize, 9, 3, 13),
     maxTurns: clampNumber(record.maxTurns, 40, 1, 1000),
     transcriptView: normalizeTranscriptView(record.transcriptView),
     display: normalizeDisplay(record.display)

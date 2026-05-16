@@ -8,7 +8,7 @@ Backend:
 
 ```sh
 cd backend
-PYTHONPATH=src uv run uvicorn graygo_arena.main:app --host 127.0.0.1 --port 8000
+PYTHONPATH=src uv run uvicorn graygo_arena.main:app --host 0.0.0.0 --port 8000
 ```
 
 Frontend:
@@ -18,13 +18,31 @@ cd frontend
 npm run dev
 ```
 
-The frontend dev server is configured in `frontend/vite.config.ts` to bind to `0.0.0.0:5174` and proxy `/api` to the backend on `127.0.0.1:8000`.
+The backend listens on `0.0.0.0:8000`. The frontend dev server is configured in `frontend/vite.config.ts` to bind to `0.0.0.0:5174` and proxy `/api` to the backend on the same host.
 
 The backend persists games in SQLite at `GRAYGO_DATABASE_PATH` or `.runtime/graygo.db`. The frontend stores the active game id, latest game snapshot, new-game settings, transcript view, and board display toggles in browser `localStorage`, then rehydrates the game from the backend when the browser opens again.
+
+New games default to a 9x9 board, matching the trained GrayGoNet checkpoint shape.
 
 ## Human Seats
 
 Choose `human` as a seat provider to play from the shared board. In human-vs-human games, each side seals a move on the same screen; the move stays hidden until both sides have sealed and the backend resolves the turn. In human-vs-computer games, the computer seat starts thinking as soon as the turn is running, and the board resolves once the human move and computer move are both ready.
+
+## Local Trained GrayGoNet
+
+Choose `graygo_trained` as a seat provider to play against the latest champion model in `~/proj/graygo`. By default the backend resolves `GRAYGO_MODEL_REPO` to the sibling `graygo` checkout, prefers the newest fresh `checkpoints/champion_traced.pt`, and falls back to the highest-numbered `champion_iter_*.pt` checkpoint when the traced export is stale or missing.
+
+Optional overrides:
+
+```sh
+GRAYGO_MODEL_REPO=~/proj/graygo
+GRAYGO_MODEL_PATH=latest
+GRAYGO_MODEL_PYTHON=~/proj/graygo/.venv/bin/python
+GRAYGO_MODEL_DEVICE=cpu
+GRAYGO_MODEL_BOARD_SIZE=9
+```
+
+The arena backend does not need PyTorch installed in its own Python environment. If PyTorch is unavailable there, the provider runs inference through `GRAYGO_MODEL_PYTHON`, which should point at the training repo environment.
 
 ## OpenAI Credentials
 

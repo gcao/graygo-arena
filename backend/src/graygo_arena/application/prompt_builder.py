@@ -17,6 +17,8 @@ def build_move_request(
     turn_index: int,
 ) -> ProviderMoveRequest:
     moves = legal_moves(board, seat.color, forbidden)
+    own_forbidden = forbidden.for_color(seat.color)
+    opponent_forbidden = forbidden.for_color("white" if seat.color == "black" else "black")
     return ProviderMoveRequest(
         game_id=game_id,
         seat_session_id=seat.id,
@@ -28,4 +30,8 @@ def build_move_request(
         public_history=public_history,
         private_history=private_history,
         turn_index=turn_index,
+        own_forbidden=tuple(coordinate.to_label() for coordinate in sorted(own_forbidden)),
+        opponent_forbidden=tuple(
+            coordinate.to_label() for coordinate in sorted(opponent_forbidden)
+        ),
     )

@@ -36,7 +36,7 @@ class SeatConfigRequest(BaseModel):
 class CreateGameRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    board_size: int = Field(default=7, ge=3, le=26)
+    board_size: int = Field(default=9, ge=3, le=26)
     ruleset: str = "graygo-v1"
     black: SeatConfigRequest = Field(default_factory=SeatConfigRequest)
     white: SeatConfigRequest = Field(default_factory=SeatConfigRequest)

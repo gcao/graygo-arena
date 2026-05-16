@@ -46,7 +46,7 @@ class SeatConfig:
 
 @dataclass(frozen=True)
 class CreateGameCommand:
-    board_size: int = 7
+    board_size: int = 9
     ruleset: Literal["graygo-v1"] = "graygo-v1"
     black: SeatConfig = field(default_factory=_default_black_config)
     white: SeatConfig = field(default_factory=_default_white_config)
@@ -99,6 +99,8 @@ class ProviderMoveRequest:
     public_history: tuple[str, ...]
     private_history: tuple[str, ...]
     turn_index: int
+    own_forbidden: tuple[str, ...] = field(default_factory=_empty_str_tuple)
+    opponent_forbidden: tuple[str, ...] = field(default_factory=_empty_str_tuple)
 
 
 @dataclass(frozen=True)

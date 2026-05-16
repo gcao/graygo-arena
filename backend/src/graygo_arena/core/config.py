@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import re
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
@@ -28,12 +30,21 @@ class Settings:
     openai_codex_originator: str = "pi"
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-sonnet-4-20250514"
+    graygo_model_repo: Path = Path("../graygo")
+    graygo_model_path: Path = Path("../graygo/checkpoints/champion_traced.pt")
+    graygo_model_python: Path = Path(sys.executable)
+    graygo_model_device: str = "cpu"
+    graygo_model_board_size: int = 9
 
 
 def load_settings() -> Settings:
     values = _environment_values()
     openai_token, openai_source, openai_error = _openai_auth(values)
     database_path = Path(values.get("GRAYGO_DATABASE_PATH", ".runtime/graygo.db"))
+    graygo_model_repo = Path(
+        values.get("GRAYGO_MODEL_REPO", str(_default_graygo_model_repo()))
+    ).expanduser()
+    graygo_model_path = _graygo_model_path(values.get("GRAYGO_MODEL_PATH"), graygo_model_repo)
     return Settings(
         database_path=database_path,
         openai_auth_token=openai_token,
@@ -43,13 +54,24 @@ def load_settings() -> Settings:
         openai_reasoning_effort=_openai_reasoning_effort(
             values.get("OPENAI_REASONING_EFFORT", "medium")
         ),
-        openai_max_output_tokens=_positive_int(values.get("OPENAI_MAX_OUTPUT_TOKENS"), 2048),
+        openai_max_output_tokens=_positive_int(
+            values.get("OPENAI_MAX_OUTPUT_TOKENS"), 2048, "OPENAI_MAX_OUTPUT_TOKENS"
+        ),
         openai_codex_base_url=values.get(
             "OPENAI_CODEX_BASE_URL", "https://chatgpt.com/backend-api"
         ),
         openai_codex_originator=values.get("OPENAI_CODEX_ORIGINATOR", "pi"),
         anthropic_api_key=_non_empty(values.get("ANTHROPIC_API_KEY")),
         anthropic_model=values.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514"),
+        graygo_model_repo=graygo_model_repo,
+        graygo_model_path=graygo_model_path,
+        graygo_model_python=Path(
+            values.get("GRAYGO_MODEL_PYTHON", str(_default_graygo_model_python(graygo_model_repo)))
+        ).expanduser(),
+        graygo_model_device=values.get("GRAYGO_MODEL_DEVICE", "cpu"),
+        graygo_model_board_size=_positive_int(
+            values.get("GRAYGO_MODEL_BOARD_SIZE"), 9, "GRAYGO_MODEL_BOARD_SIZE"
+        ),
     )
 
 
@@ -63,6 +85,45 @@ def _read_first_env_file() -> dict[str, str]:
         if path.is_file():
             return _parse_env_file(path)
     return {}
+
+
+def _default_graygo_model_repo() -> Path:
+    repo_root = Path(__file__).resolve().parents[4]
+    return repo_root.parent / "graygo"
+
+
+def _default_graygo_model_python(repo: Path) -> Path:
+    venv_python = repo / ".venv" / "bin" / "python"
+    return venv_python if venv_python.is_file() else Path(sys.executable)
+
+
+def _graygo_model_path(value: str | None, repo: Path) -> Path:
+    if value and value.strip().lower() not in {"auto", "latest"}:
+        return Path(value).expanduser()
+    return _latest_graygo_model_path(repo)
+
+
+def _latest_graygo_model_path(repo: Path) -> Path:
+    checkpoints = repo / "checkpoints"
+    traced = checkpoints / "champion_traced.pt"
+    latest_champion = _latest_numbered_checkpoint(checkpoints, "champion_iter_*.pt")
+    if latest_champion is None:
+        return traced
+    if traced.is_file() and traced.stat().st_mtime >= latest_champion.stat().st_mtime:
+        return traced
+    return latest_champion
+
+
+def _latest_numbered_checkpoint(directory: Path, pattern: str) -> Path | None:
+    best: tuple[int, Path] | None = None
+    for path in directory.glob(pattern):
+        match = re.search(r"_(\d+)\.pt$", path.name)
+        if not match:
+            continue
+        candidate = (int(match.group(1)), path)
+        if best is None or candidate[0] > best[0]:
+            best = candidate
+    return best[1] if best else None
 
 
 def _env_file_candidates() -> tuple[Path, ...]:
@@ -149,12 +210,12 @@ def _openai_reasoning_effort(value: str) -> OpenAIReasoningEffort:
     return cast(OpenAIReasoningEffort, effort)
 
 
-def _positive_int(value: str | None, default: int) -> int:
+def _positive_int(value: str | None, default: int, name: str) -> int:
     if value is None or not value.strip():
         return default
     parsed = int(value)
     if parsed < 1:
-        msg = "OPENAI_MAX_OUTPUT_TOKENS must be positive"
+        msg = f"{name} must be positive"
         raise ValueError(msg)
     return parsed
 

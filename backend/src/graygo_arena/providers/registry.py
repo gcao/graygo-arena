@@ -20,6 +20,7 @@ from graygo_arena.providers.fake import (
     ScriptedPassProvider,
     ScriptedSequenceProvider,
 )
+from graygo_arena.providers.local_model import GrayGoTrainedProvider
 
 
 class ProviderCatalog:
@@ -36,6 +37,13 @@ class ProviderCatalog:
             "scripted_center": ScriptedCenterProvider(),
             "scripted_pass": ScriptedPassProvider(),
             "scripted_sequence": ScriptedSequenceProvider(),
+            "graygo_trained": GrayGoTrainedProvider(
+                model_path=self._settings.graygo_model_path,
+                graygo_repo=self._settings.graygo_model_repo,
+                python_path=self._settings.graygo_model_python,
+                board_size=self._settings.graygo_model_board_size,
+                device=self._settings.graygo_model_device,
+            ),
         }
         if self._settings.openai_auth_token:
             if self._settings.openai_auth_source == "codex_oauth":
@@ -122,6 +130,13 @@ class ProviderCatalog:
                 models=(self._settings.anthropic_model,),
             ),
             ProviderInfo(
+                id="graygo_trained",
+                provider="graygo_trained",
+                auth_type="local_file",
+                configured=self._settings.graygo_model_path.is_file(),
+                models=(self._settings.graygo_model_path.name,),
+            ),
+            ProviderInfo(
                 id="scripted_sequence",
                 provider="scripted_sequence",
                 auth_type="none",
@@ -153,14 +168,17 @@ class ProviderCatalog:
                 message="not configured",
             )
         adapter = self.adapter_for(provider)
+        board_size = self._settings.graygo_model_board_size if provider == "graygo_trained" else 3
+        empty_row = "+" * board_size
+        center_label = f"{chr(ord('a') + board_size // 2)}{board_size // 2 + 1}"
         request = ProviderMoveRequest(
             game_id="provider_test",
             seat_session_id="seat_test",
             color="black",
             model=model,
-            board_key="+++/+++/+++",
-            board_rows=("+++", "+++", "+++"),
-            legal_moves=("a1", "b2", "PASS"),
+            board_key="/".join(empty_row for _ in range(board_size)),
+            board_rows=tuple(empty_row for _ in range(board_size)),
+            legal_moves=("a1", center_label, "PASS"),
             public_history=(),
             private_history=(),
             turn_index=0,
