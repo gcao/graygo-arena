@@ -114,6 +114,9 @@ class GameOrchestrator:
                 public_history=public_history,
                 private_history=self._repository.list_private_history(black.id),
                 turn_index=game.current_turn,
+                turns=self._repository.list_turns(game_id),
+                max_turns=game.max_turns,
+                mutual_pass_streak=game.double_pass_count,
             )
             white_request = build_move_request(
                 game_id=game_id,
@@ -123,6 +126,9 @@ class GameOrchestrator:
                 public_history=public_history,
                 private_history=self._repository.list_private_history(white.id),
                 turn_index=game.current_turn,
+                turns=self._repository.list_turns(game_id),
+                max_turns=game.max_turns,
+                mutual_pass_streak=game.double_pass_count,
             )
             black_move, black_call = self._request_valid_move(game, black, black_request)
             white_move, white_call = self._request_valid_move(game, white, white_request)
@@ -346,6 +352,9 @@ class GameOrchestrator:
             public_history=self._repository.list_public_history(game.id),
             private_history=self._repository.list_private_history(seat.id),
             turn_index=game.current_turn,
+            turns=self._repository.list_turns(game.id),
+            max_turns=game.max_turns,
+            mutual_pass_streak=game.double_pass_count,
         )
 
     def _pending_from_call(

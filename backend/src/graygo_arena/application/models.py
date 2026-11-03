@@ -88,6 +88,13 @@ class GameRecord:
 
 
 @dataclass(frozen=True)
+class PublicRuleRound:
+    before_rows: tuple[str, ...]
+    black_move: str
+    white_move: str
+
+
+@dataclass(frozen=True)
 class ProviderMoveRequest:
     game_id: str
     seat_session_id: str
@@ -101,6 +108,9 @@ class ProviderMoveRequest:
     turn_index: int
     own_forbidden: tuple[str, ...] = field(default_factory=_empty_str_tuple)
     opponent_forbidden: tuple[str, ...] = field(default_factory=_empty_str_tuple)
+    rule_history: tuple[PublicRuleRound, ...] = ()
+    max_turns: int = 200
+    mutual_pass_streak: int = 0
 
 
 @dataclass(frozen=True)

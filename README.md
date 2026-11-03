@@ -46,6 +46,29 @@ The arena backend does not need PyTorch installed in its own Python environment.
 
 For trained-model seats, turn 0 is randomized from legal placements so same-model matches do not start from identical deterministic policy choices. From turn 1 onward, moves come from the model policy.
 
+## Experimental NFSP 9x9 demo
+
+The new provider is graygo_nfsp_experimental, model avg-9x9-diagnostic-32k.
+It uses an actual 32,768-record 9x9 self-play checkpoint (228 Q updates, 58
+supervised updates) from a hardware-profile run. Playing strength is unvalidated;
+this is not a promoted champion or a completed 8M/80M training run.
+
+Set GRAYGO_NFSP_MODEL_PATH to the exported inference bundle, and point
+GRAYGO_MODEL_REPO at its compatible training source and GRAYGO_MODEL_PYTHON
+at the training environment. The provider uses the full 30 spatial channels and
+14 globals, including both completed rule-history slots and current restrictions.
+Only public state reaches the inference worker. It samples the legal average
+policy, including PASS, with separate deterministic per-seat draws.
+
+Choose a 9x9 board and 200-turn limit, Black human, and White
+graygo_nfsp_experimental. Create the game, press Start, select an empty point
+to seal the move. The backend resolves it after the computer move is ready.
+
+The arena's existing rules are retained: its single-mutual-pass ending,
+capture restrictions and lack of the training engine's two-round ko differ
+from the checkpoint's training rules. This demo tests the interface and allows
+experimental play; its results are not training-engine strength measurements.
+
 ## OpenAI Credentials
 
 Create a repo-root `.env` file. The backend also accepts `backend/.env`, or a custom path through `GRAYGO_ENV_FILE`. `.env` files are ignored by git in this repo.

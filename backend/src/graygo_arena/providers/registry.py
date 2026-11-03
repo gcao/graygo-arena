@@ -21,6 +21,8 @@ from graygo_arena.providers.fake import (
     ScriptedSequenceProvider,
 )
 from graygo_arena.providers.local_model import GrayGoTrainedProvider
+from graygo_arena.providers.nfsp_model import MODEL as NFSP_MODEL
+from graygo_arena.providers.nfsp_model import ExperimentalNfspProvider
 
 
 class ProviderCatalog:
@@ -34,6 +36,11 @@ class ProviderCatalog:
         self._settings = settings or load_settings()
         self._adapters: dict[str, ProviderAdapter] = {
             "fake_random": FakeRandomProvider(seed=seed),
+            "graygo_nfsp_experimental": ExperimentalNfspProvider(
+                checkpoint=self._settings.graygo_nfsp_model_path,
+                repo=self._settings.graygo_model_repo,
+                python=self._settings.graygo_model_python,
+            ),
             "scripted_center": ScriptedCenterProvider(),
             "scripted_pass": ScriptedPassProvider(),
             "scripted_sequence": ScriptedSequenceProvider(),
@@ -137,6 +144,14 @@ class ProviderCatalog:
                 models=(self._settings.graygo_model_path.name,),
             ),
             ProviderInfo(
+                id="graygo_nfsp_experimental",
+                provider="graygo_nfsp_experimental",
+                auth_type="local_file",
+                configured=self._settings.graygo_nfsp_model_path is not None
+                and self._settings.graygo_nfsp_model_path.is_file(),
+                models=(NFSP_MODEL,),
+            ),
+            ProviderInfo(
                 id="scripted_sequence",
                 provider="scripted_sequence",
                 auth_type="none",
@@ -168,7 +183,13 @@ class ProviderCatalog:
                 message="not configured",
             )
         adapter = self.adapter_for(provider)
-        board_size = self._settings.graygo_model_board_size if provider == "graygo_trained" else 3
+        board_size = (
+            self._settings.graygo_model_board_size
+            if provider == "graygo_trained"
+            else 9
+            if provider == "graygo_nfsp_experimental"
+            else 3
+        )
         empty_row = "+" * board_size
         center_label = f"{chr(ord('a') + board_size // 2)}{board_size // 2 + 1}"
         request = ProviderMoveRequest(

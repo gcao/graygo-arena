@@ -678,6 +678,9 @@ function SeatEditor({
           ))}
         </select>
       </label>
+      {value.provider === "graygo_nfsp_experimental" ? (
+        <p className="muted">Experimental 32k-record NFSP policy. Playing strength is unvalidated.</p>
+      ) : null}
       <label>
         Model
         <input

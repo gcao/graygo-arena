@@ -35,6 +35,7 @@ class Settings:
     graygo_model_python: Path = Path(sys.executable)
     graygo_model_device: str = "cpu"
     graygo_model_board_size: int = 9
+    graygo_nfsp_model_path: Path | None = None
 
 
 def load_settings() -> Settings:
@@ -69,6 +70,11 @@ def load_settings() -> Settings:
             values.get("GRAYGO_MODEL_PYTHON", str(_default_graygo_model_python(graygo_model_repo)))
         ).expanduser(),
         graygo_model_device=values.get("GRAYGO_MODEL_DEVICE", "cpu"),
+        graygo_nfsp_model_path=(
+            Path(values["GRAYGO_NFSP_MODEL_PATH"]).expanduser()
+            if _non_empty(values.get("GRAYGO_NFSP_MODEL_PATH"))
+            else None
+        ),
         graygo_model_board_size=_positive_int(
             values.get("GRAYGO_MODEL_BOARD_SIZE"), 9, "GRAYGO_MODEL_BOARD_SIZE"
         ),
