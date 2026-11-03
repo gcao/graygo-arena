@@ -36,6 +36,9 @@ class Settings:
     graygo_model_device: str = "cpu"
     graygo_model_board_size: int = 9
     graygo_nfsp_model_path: Path | None = None
+    graygo_old_model_repo: Path | None = None
+    graygo_old_model_path: Path | None = None
+    graygo_loop_manifest: Path | None = None
 
 
 def load_settings() -> Settings:
@@ -70,6 +73,9 @@ def load_settings() -> Settings:
             values.get("GRAYGO_MODEL_PYTHON", str(_default_graygo_model_python(graygo_model_repo)))
         ).expanduser(),
         graygo_model_device=values.get("GRAYGO_MODEL_DEVICE", "cpu"),
+        graygo_old_model_repo=_optional_path(values.get("GRAYGO_OLD_MODEL_REPO")),
+        graygo_old_model_path=_optional_path(values.get("GRAYGO_OLD_MODEL_PATH")),
+        graygo_loop_manifest=_optional_path(values.get("GRAYGO_LOOP_MANIFEST")),
         graygo_nfsp_model_path=(
             Path(values["GRAYGO_NFSP_MODEL_PATH"]).expanduser()
             if _non_empty(values.get("GRAYGO_NFSP_MODEL_PATH"))
@@ -79,6 +85,10 @@ def load_settings() -> Settings:
             values.get("GRAYGO_MODEL_BOARD_SIZE"), 9, "GRAYGO_MODEL_BOARD_SIZE"
         ),
     )
+
+
+def _optional_path(value: str | None) -> Path | None:
+    return Path(value).expanduser() if value and value.strip() else None
 
 
 def _environment_values() -> dict[str, str]:

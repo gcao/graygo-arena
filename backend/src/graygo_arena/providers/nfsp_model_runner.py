@@ -23,7 +23,8 @@ def main() -> None:
         bundle["format_version"] != "graygo/arena-nfsp-average/1"
         or bundle["encoding_version"] != encoding.ENCODING_VERSION
         or bundle["board_size"] != 9
-        or bundle["training_records"] != 32768
+        or not isinstance(bundle["training_records"], int)
+        or bundle["training_records"] < 0
         or bundle["head"] != "average"
     ):
         raise ValueError("Unsupported full-state NFSP checkpoint")

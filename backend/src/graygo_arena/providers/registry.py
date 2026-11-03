@@ -7,6 +7,7 @@ import httpx
 from graygo_arena.application.models import ProviderAdapter, ProviderMoveRequest, SeatSession
 from graygo_arena.core.config import Settings, load_settings
 from graygo_arena.providers.base import ProviderInfo, ProviderTestResult
+from graygo_arena.providers.champion_model import LoopChampionProvider, SnapshotPolicyProvider
 from graygo_arena.providers.direct import (
     AnthropicMessagesProvider,
     OpenAICodexResponsesProvider,
@@ -52,6 +53,23 @@ class ProviderCatalog:
                 device=self._settings.graygo_model_device,
             ),
         }
+        self._adapters["graygo_loop_champion"] = LoopChampionProvider(
+            manifest=self._settings.graygo_loop_manifest,
+            repo=self._settings.graygo_model_repo,
+            python=self._settings.graygo_model_python,
+        )
+        if (
+            self._settings.graygo_old_model_path is not None
+            and self._settings.graygo_old_model_path.is_file()
+        ):
+            self._adapters["graygo_old_champion"] = SnapshotPolicyProvider(
+                checkpoint=self._settings.graygo_old_model_path,
+                repo=self._settings.graygo_old_model_repo or self._settings.graygo_model_repo,
+                python=self._settings.graygo_model_python,
+                provider_id="graygo_old_champion",
+                model_id="v6-0081-raw-policy",
+                family="legacy",
+            )
         if self._settings.openai_auth_token:
             if self._settings.openai_auth_source == "codex_oauth":
                 self._adapters["openai_default"] = OpenAICodexResponsesProvider(
@@ -152,6 +170,21 @@ class ProviderCatalog:
                 models=(NFSP_MODEL,),
             ),
             ProviderInfo(
+                id="graygo_old_champion",
+                provider="graygo_old_champion",
+                auth_type="local_file",
+                configured="graygo_old_champion" in self._adapters,
+                models=("v6-0081-raw-policy",),
+            ),
+            ProviderInfo(
+                id="graygo_loop_champion",
+                provider="graygo_loop_champion",
+                auth_type="local_file",
+                configured=self._settings.graygo_loop_manifest is not None
+                and self._settings.graygo_loop_manifest.is_file(),
+                models=("latest",),
+            ),
+            ProviderInfo(
                 id="scripted_sequence",
                 provider="scripted_sequence",
                 auth_type="none",
@@ -187,7 +220,8 @@ class ProviderCatalog:
             self._settings.graygo_model_board_size
             if provider == "graygo_trained"
             else 9
-            if provider == "graygo_nfsp_experimental"
+            if provider
+            in {"graygo_nfsp_experimental", "graygo_old_champion", "graygo_loop_champion"}
             else 3
         )
         empty_row = "+" * board_size

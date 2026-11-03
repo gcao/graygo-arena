@@ -192,3 +192,5 @@ Use `high` if a selected model rejects `xhigh`. `OPENAI_MAX_OUTPUT_TOKENS` is se
 ANTHROPIC_API_KEY=sk-ant-...
 ANTHROPIC_MODEL=claude-sonnet-4-20250514
 ```
+
+See [historical and loop champion models](docs/champion-models.md) for the old trained checkpoint and live release slot. Both retain independent private sampling and include PASS.

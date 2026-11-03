@@ -74,12 +74,18 @@ class ExperimentalNfspProvider:
         python: Path,
         runner: ScoresRunner | None = None,
         timeout_seconds: float = 30.0,
+        provider_id: str = PROVIDER,
+        model_id: str = MODEL,
+        training_records: int | None = 32768,
     ) -> None:
         self.checkpoint = checkpoint
         self.repo = repo
         self.python = python
         self.runner = runner
         self.timeout = timeout_seconds
+        self.provider_id = provider_id
+        self.model_id = model_id
+        self.training_records = training_records
 
     def request_move(self, request: ProviderMoveRequest, seat: SeatSession) -> ProviderMoveResponse:
         if request.color != seat.color or request.seat_session_id != seat.id:
@@ -104,12 +110,12 @@ class ExperimentalNfspProvider:
         move = random.Random(seed).choices(legal, weights=weights, k=1)[0]
         probability = weights[legal.index(move)] / sum(weights)
         raw = {
-            "provider": PROVIDER,
-            "model": MODEL,
+            "provider": self.provider_id,
+            "model": self.model_id,
             "board_key": request.board_key,
             "move": move,
             "policy_probability": probability,
-            "training_records": 32768,
+            "training_records": self.training_records,
             "experimental": True,
             "strength_validated": False,
         }
@@ -117,10 +123,12 @@ class ExperimentalNfspProvider:
             board_key=request.board_key,
             move=move,
             raw_response=json.dumps(raw, sort_keys=True),
-            strategic_summary="Experimental 32k NFSP average policy; strength is unvalidated.",
+            strategic_summary="Experimental local policy; playing strength is unvalidated.",
             metadata={
-                "model": MODEL,
-                "training_records": "32768",
+                "model": self.model_id,
+                "training_records": str(self.training_records)
+                if self.training_records is not None
+                else "historical",
                 "head": "average",
                 "selection": "sampled legal policy including PASS",
                 "validation": "diagnostic only",
