@@ -15,7 +15,7 @@ from graygo_arena.application.models import (
 )
 from graygo_arena.core.config import OpenAIReasoningEffort
 
-MOVE_SCHEMA: dict[str, object] = {
+BASE_MOVE_SCHEMA: dict[str, object] = {
     "type": "object",
     "additionalProperties": False,
     "required": ["board_key", "move", "strategic_summary"],
@@ -25,6 +25,16 @@ MOVE_SCHEMA: dict[str, object] = {
         "strategic_summary": {"type": "string"},
     },
 }
+
+
+def _move_schema(request: ProviderMoveRequest) -> dict[str, object]:
+    schema = cast(dict[str, object], json.loads(json.dumps(BASE_MOVE_SCHEMA)))
+    properties = cast(dict[str, object], schema["properties"])
+    board_key = cast(dict[str, object], properties["board_key"])
+    move = cast(dict[str, object], properties["move"])
+    board_key["enum"] = [request.board_key]
+    move["enum"] = list(request.legal_moves)
+    return schema
 
 
 class ProviderCredentialError(RuntimeError):
@@ -72,7 +82,7 @@ class OpenAIResponsesProvider:
                 "format": {
                     "type": "json_schema",
                     "name": "graygo_move",
-                    "schema": MOVE_SCHEMA,
+                    "schema": _move_schema(request),
                     "strict": True,
                 }
             },
@@ -205,7 +215,7 @@ class AnthropicMessagesProvider:
                     {
                         "name": "choose_graygo_move",
                         "description": "Return the chosen Gray Go move for this seat.",
-                        "input_schema": MOVE_SCHEMA,
+                        "input_schema": _move_schema(request),
                     }
                 ],
                 "tool_choice": {"type": "tool", "name": "choose_graygo_move"},
@@ -231,7 +241,12 @@ def _move_prompt(request: ProviderMoveRequest, seat: SeatSession) -> str:
             f"BoardKey: {request.board_key}",
             "Board:",
             *request.board_rows,
+            f"Forbidden for you: {', '.join(request.own_forbidden) or 'none'}",
+            (
+                "Forbidden points are not legal for you even when they are empty on the board."
+            ),
             f"Legal moves: {', '.join(request.legal_moves)}",
+            "The move value must exactly match one of the Legal moves entries.",
             (
                 "Return only JSON with board_key, move, and a concise strategic_summary. "
                 "Do not wrap it in Markdown."

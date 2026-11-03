@@ -16,6 +16,8 @@ def request9(
     *,
     board_rows: tuple[str, ...] | None = None,
     legal_moves: tuple[str, ...] = ("a1", "e5", "PASS"),
+    own_forbidden: tuple[str, ...] = (),
+    opponent_forbidden: tuple[str, ...] = (),
     turn_index: int = 1,
 ) -> ProviderMoveRequest:
     rows = board_rows or tuple("+" * 9 for _ in range(9))
@@ -29,6 +31,8 @@ def request9(
         legal_moves=legal_moves,
         public_history=(),
         private_history=(),
+        own_forbidden=own_forbidden,
+        opponent_forbidden=opponent_forbidden,
         turn_index=turn_index,
     )
 
@@ -72,7 +76,25 @@ def test_graygo_trained_ignores_illegal_high_logits() -> None:
 
     response = provider.request_move(request9(legal_moves=("a1", "PASS")), seat())
 
-    assert response.move == "PASS"
+    assert response.move == "a1"
+
+
+def test_graygo_trained_ignores_forbidden_logits_and_keeps_playing() -> None:
+    logits = [0.0] * 82
+    logits[48] = 99.0  # f4 is forbidden for Black in this request.
+    logits[81] = 98.0
+    logits[3] = 1.0
+    provider = GrayGoTrainedProvider(
+        model_path=Path("/missing/champion_traced.pt"),
+        runner=lambda _request, _seat: logits,
+    )
+
+    response = provider.request_move(
+        request9(legal_moves=("a4", "PASS"), own_forbidden=("f4",)),
+        seat(),
+    )
+
+    assert response.move == "a4"
 
 
 def test_graygo_trained_randomizes_first_move_without_running_model() -> None:
@@ -124,9 +146,9 @@ def test_graygo_trained_breaks_equal_logit_ties_by_seat() -> None:
         seat("white"),
     )
 
-    assert black_response.move == "a1"
-    assert white_response.move == "a3"
-    assert '"policy_tie_count": 5' in black_response.raw_response
+    assert black_response.move == "a4"
+    assert white_response.move == "a2"
+    assert '"policy_tie_count": 4' in black_response.raw_response
 
 
 def test_graygo_trained_encodes_player_relative_planes_and_forbidden_points() -> None:

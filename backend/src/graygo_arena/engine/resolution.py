@@ -218,19 +218,28 @@ def _forbidden_from_captures(
     updates: list[ForbiddenUpdate] = []
 
     for capture in captures:
-        if capture.captured_color == "gray":
-            continue
         coordinates = tuple(sorted(capture.coordinates))
-        if capture.captured_color == "black":
+        if capture.captured_color == "gray":
             black_forbidden.update(coordinates)
+            white_forbidden.update(coordinates)
+            updates.append(ForbiddenUpdate(color="black", coordinates=coordinates))
+            updates.append(ForbiddenUpdate(color="white", coordinates=coordinates))
+        elif capture.captured_color == "black":
+            black_forbidden.update(coordinates)
+            updates.append(
+                ForbiddenUpdate(
+                    color=capture.captured_color,
+                    coordinates=coordinates,
+                )
+            )
         else:
             white_forbidden.update(coordinates)
-        updates.append(
-            ForbiddenUpdate(
-                color=capture.captured_color,
-                coordinates=coordinates,
+            updates.append(
+                ForbiddenUpdate(
+                    color=capture.captured_color,
+                    coordinates=coordinates,
+                )
             )
-        )
 
     return (
         ForbiddenState(

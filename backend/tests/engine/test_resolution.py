@@ -75,19 +75,14 @@ def test_capture_removes_zero_liberty_group() -> None:
     assert captured_labels == ("b2",)
 
 
-def test_capture_removes_zero_liberty_gray_group_without_forbidden_update() -> None:
+def test_capture_removes_zero_liberty_gray_group_and_forbids_both_colors() -> None:
     state = GameState(
-        board=Board.from_key(
-            "+++++++/+WWG+++/+BWBBB+/+BGGWW+/++WBBW+/+++GBB+/+++WW++"
-        )
+        board=Board.from_key("+++++++/+WWG+++/+BWBBB+/+BGGWW+/++WBBW+/+++GBB+/+++WW++")
     )
 
     resolution = resolve_turn(state, PassMove(), PassMove())
 
-    assert (
-        resolution.post_board_key
-        == "+++++++/+WWG+++/+BWBBB+/+B++WW+/++WBBW+/+++GBB+/+++WW++"
-    )
+    assert resolution.post_board_key == "+++++++/+WWG+++/+BWBBB+/+B++WW+/++WBBW+/+++GBB+/+++WW++"
     assert len(resolution.captures) == 1
     capture = resolution.captures[0]
     assert capture.captured_color == "gray"
@@ -96,9 +91,17 @@ def test_capture_removes_zero_liberty_gray_group_without_forbidden_update() -> N
         "d3",
         "d4",
     )
-    assert resolution.forbidden_updates == ()
-    assert not resolution.post_state.forbidden.black
-    assert not resolution.post_state.forbidden.white
+    assert [
+        (update.color, tuple(c.to_label() for c in update.coordinates))
+        for update in resolution.forbidden_updates
+    ] == [
+        ("black", ("d3", "d4")),
+        ("white", ("d3", "d4")),
+    ]
+    assert Coordinate.parse("d3", size=7) in resolution.post_state.forbidden.black
+    assert Coordinate.parse("d4", size=7) in resolution.post_state.forbidden.black
+    assert Coordinate.parse("d3", size=7) in resolution.post_state.forbidden.white
+    assert Coordinate.parse("d4", size=7) in resolution.post_state.forbidden.white
 
 
 def test_capture_creates_color_specific_forbidden_update() -> None:
@@ -144,3 +147,35 @@ def test_pass_plus_placement_does_not_collide_and_resets_double_pass_count() -> 
     assert all(event.event_type != "collision" for event in resolution.placement_events)
     assert resolution.double_pass_count == 0
     assert resolution.game_finished is False
+
+
+def test_captured_same_turn_collision_forbids_coordinate_for_both_colors() -> None:
+    state = GameState(
+        board=Board.from_key(
+            "++++W+W++/++B++W+W+/++B+W+W++/++BW+W+BW/W+++W+B+W/"
+            "BBBBBWWBW/+++++W+B+/+++++++B+/B++++++B+"
+        ),
+        turn_index=21,
+    )
+
+    resolution = resolve_turn(state, move("e8", size=9), move("e8", size=9))
+
+    assert (
+        resolution.post_board_key == "++++W+W++/++B++W+W+/++B+W+W++/++BW+W+BW/W+++W+B+W/"
+        "BBBBBWWBW/+++++W+B+/+++++++B+/B++++++B+"
+    )
+    assert len(resolution.captures) == 1
+    assert resolution.captures[0].captured_color == "gray"
+    assert tuple(coordinate.to_label() for coordinate in resolution.captures[0].coordinates) == (
+        "e8",
+    )
+    assert [
+        (update.color, tuple(c.to_label() for c in update.coordinates))
+        for update in resolution.forbidden_updates
+    ] == [
+        ("black", ("e8",)),
+        ("white", ("e8",)),
+    ]
+    assert Coordinate.parse("e8", size=9) in resolution.post_state.forbidden.black
+    assert Coordinate.parse("e8", size=9) in resolution.post_state.forbidden.white
+    assert resolution.placement_events[0].event_type == "collision"

@@ -571,7 +571,8 @@ export default function App() {
             <div>
               <h2>Live Board</h2>
               <p className="muted">
-                Turn {game?.current_turn ?? 0} · {game?.board_key ?? "no BoardKey"}
+                Turn {game?.current_turn ?? 0}
+                {game ? ` / ${game.max_turns}` : ""} · {game?.board_key ?? "no BoardKey"}
               </p>
             </div>
             <div className="toggle-row">

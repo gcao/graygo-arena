@@ -88,7 +88,7 @@ class GrayGoTrainedProvider:
             move=selection.move,
             raw_response=json.dumps(raw, sort_keys=True),
             strategic_summary=(
-                "Selected the highest-logit legal move from the trained GrayGoNet policy."
+                "Selected the highest-logit legal placement from the trained GrayGoNet policy."
             ),
             metadata={
                 "model_path": str(self._model_path),
@@ -325,7 +325,9 @@ def _select_legal_move(
     seat: SeatSession,
     board_size: int,
 ) -> MoveSelection:
-    legal_moves = request.legal_moves
+    legal_moves = tuple(move for move in request.legal_moves if move != "PASS")
+    if not legal_moves and "PASS" in request.legal_moves:
+        legal_moves = ("PASS",)
     if not legal_moves:
         return MoveSelection(move="PASS", score=float("-inf"), tie_count=0)
 

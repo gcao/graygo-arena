@@ -89,11 +89,17 @@ def test_openai_adapter_uses_responses_json_schema_and_parses_output() -> None:
     text_format = text_dict["format"]
     assert isinstance(text_format, dict)
     format_dict = cast(dict[str, object], text_format)
+    schema = cast(dict[str, object], format_dict["schema"])
+    properties = cast(dict[str, object], schema["properties"])
+    move_property = cast(dict[str, object], properties["move"])
+    board_key_property = cast(dict[str, object], properties["board_key"])
     assert captured["authorization"] == "Bearer sk-codex-test"
     assert payload_dict["model"] == "model_from_seat"
     assert payload_dict["reasoning"] == {"effort": "xhigh"}
     assert payload_dict["max_output_tokens"] == 4096
     assert format_dict["type"] == "json_schema"
+    assert board_key_property["enum"] == ["+++/+++/+++"]
+    assert move_property["enum"] == ["a1", "b2", "PASS"]
     assert response.move == "a1"
     assert response.metadata["provider_response_id"] == "resp_123"
 
@@ -134,15 +140,19 @@ def test_codex_oauth_adapter_uses_chatgpt_backend_headers_and_parses_sse() -> No
 
     payload = captured["payload"]
     assert isinstance(payload, dict)
+    payload_dict = cast(dict[str, object], payload)
     assert captured["url"] == "https://chatgpt.test/backend-api/codex/responses"
     assert captured["authorization"] == f"Bearer {codex_jwt('acc_123')}"
     assert captured["account_id"] == "acc_123"
     assert captured["beta"] == "responses=experimental"
     assert captured["originator"] == "pi"
     assert captured["accept"] == "text/event-stream"
-    assert payload["model"] == "model_from_seat"
-    assert payload["stream"] is True
-    assert payload["reasoning"] == {"effort": "xhigh", "summary": "auto"}
+    assert payload_dict["model"] == "model_from_seat"
+    assert payload_dict["stream"] is True
+    assert payload_dict["reasoning"] == {"effort": "xhigh", "summary": "auto"}
+    instructions = payload_dict["instructions"]
+    assert isinstance(instructions, str)
+    assert "Choose exactly one legal Gray Go move" in instructions
     assert response.move == "b2"
     assert response.metadata["provider_response_id"] == "resp_codex"
 
@@ -183,9 +193,17 @@ def test_anthropic_adapter_uses_messages_tool_choice_and_parses_tool_use() -> No
 
     payload = captured["payload"]
     assert isinstance(payload, dict)
+    payload_dict = cast(dict[str, object], payload)
     assert captured["api_key"] == "sk-ant-test"
     assert captured["version"] == "2023-06-01"
-    assert payload["tool_choice"] == {"type": "tool", "name": "choose_graygo_move"}
+    assert payload_dict["tool_choice"] == {"type": "tool", "name": "choose_graygo_move"}
+    tools = payload_dict["tools"]
+    assert isinstance(tools, list)
+    tool = cast(dict[str, object], tools[0])
+    input_schema = cast(dict[str, object], tool["input_schema"])
+    properties = cast(dict[str, object], input_schema["properties"])
+    move_property = cast(dict[str, object], properties["move"])
+    assert move_property["enum"] == ["a1", "b2", "PASS"]
     assert response.move == "b2"
     assert response.metadata["provider_response_id"] == "msg_123"
 
