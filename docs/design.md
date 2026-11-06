@@ -52,6 +52,18 @@ I would use **FastAPI + Python** for the backend because you already have Python
 
 API tokens should stay entirely on the backend. OpenAI explicitly warns not to expose API keys in browser/client code and recommends loading them from environment variables or server-side key management; the OpenAI API uses bearer authentication. ([OpenAI Platform][1]) Anthropic’s direct Claude API uses `x-api-key`, `anthropic-version`, and `content-type` headers, while Claude Code OAuth-style tokens are specifically a Claude Code/CLI authentication path rather than the normal direct Claude API path. ([Claude API Docs][2])
 
+## Captures before suicide
+
+After both placements (or a collision-created gray stone), remove all
+zero-liberty groups that contain no stone placed in this round. Compute all of
+these captures before removing any of them. Groups containing a new stone,
+including friendly stones joined to it, wait until those captures have been
+removed and liberties recomputed.
+
+Then remove every group that still has zero liberties simultaneously. Thus a
+capturing move can survive by gaining liberties, while mutually dead played
+groups are both removed as suicides. Black, white and gray follow the same order.
+
 ## Pass termination
 
 A game ends after **two consecutive simultaneous rounds where both players choose

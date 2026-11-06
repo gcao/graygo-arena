@@ -85,5 +85,65 @@
     "white_move": "b2",
     "post_board_key": "+++/+W+/+++",
     "expected_events": [{"type": "placement", "color": "white", "coordinate": "b2"}]
+  },
+  {
+    "name": "capturing_black_stone_survives",
+    "size": 3,
+    "pre_board_key": "WWW/W+W/WWW",
+    "forbidden": {
+      "black": [],
+      "white": []
+    },
+    "double_pass_count": 0,
+    "black_move": "b2",
+    "white_move": "PASS",
+    "post_board_key": "+++/+B+/+++",
+    "expected_events": [
+      {
+        "type": "placement"
+      },
+      {
+        "type": "capture"
+      }
+    ]
+  },
+  {
+    "name": "capturing_white_stone_survives",
+    "size": 3,
+    "pre_board_key": "BBB/B+B/BBB",
+    "forbidden": {
+      "black": [],
+      "white": []
+    },
+    "double_pass_count": 0,
+    "black_move": "PASS",
+    "white_move": "b2",
+    "post_board_key": "+++/+W+/+++",
+    "expected_events": [
+      {
+        "type": "placement"
+      },
+      {
+        "type": "capture"
+      }
+    ]
+  },
+  {
+    "name": "mutually_dead_played_groups_are_simultaneous_suicides",
+    "size": 3,
+    "pre_board_key": "BBB/W++/WWW",
+    "forbidden": {
+      "black": [],
+      "white": []
+    },
+    "double_pass_count": 0,
+    "black_move": "b2",
+    "white_move": "b3",
+    "post_board_key": "+++/+++/+++",
+    "expected_events": [
+      {
+        "type": "capture"
+      }
+    ]
   }
 ]

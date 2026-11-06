@@ -27,9 +27,10 @@ state: board, player perspective, both restriction sets, the last two completed
 pre-boards/moves, pass count and round limit. Backend legal moves remain
 authoritative. Sampling includes PASS and does not override the opening.
 
-Arena rules are unchanged. Its one-mutual-pass ending, capture restrictions and
-lack of training-engine two-round ko make this a variant demo, not a strength
-evaluation under the training rules.
+The arena now shares the training engine's two-mutual-pass ending and
+capture-before-suicide order. Its capture-derived restrictions and lack of
+training-engine two-round ko still make it a variant demo rather than a strength
+evaluation under the full training rules.
 
 Validation: 105 backend tests pass, changed-interface strict typing passes, the
 frontend builds, and an actual provider health request plus four human/model

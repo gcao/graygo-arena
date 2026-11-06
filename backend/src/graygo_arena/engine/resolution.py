@@ -95,7 +95,8 @@ def resolve_turn(state: GameState, black_move: MoveLike, white_move: MoveLike) -
     post_board, placement_events = _apply_simultaneous_placements(
         state.board, black_move, white_move
     )
-    post_board, captures = _apply_captures(post_board)
+    placed = frozenset(event.coordinate for event in placement_events)
+    post_board, captures = _apply_captures(post_board, placed)
     forbidden, forbidden_updates = _forbidden_from_captures(captures)
     double_pass_count = (
         state.double_pass_count + 1
@@ -178,35 +179,45 @@ def _apply_simultaneous_placements(
     return post_board, tuple(events)
 
 
-def _apply_captures(board: Board) -> tuple[Board, tuple[CaptureEvent, ...]]:
-    captures: list[CaptureEvent] = []
+def _apply_captures(
+    board: Board, placed: frozenset[Coordinate]
+) -> tuple[Board, tuple[CaptureEvent, ...]]:
     capture_specs: tuple[tuple[Cell, CapturedColor, CaptureByColor], ...] = (
         ("W", "white", "black"),
         ("B", "black", "white"),
         ("G", "gray", "neutral"),
     )
-    for captured_cell, captured_color, by_color in capture_specs:
-        captured_coordinates = _zero_liberty_coordinates(board, captured_cell)
-        if captured_coordinates:
-            captures.append(
-                CaptureEvent(
-                    captured_color=captured_color,
-                    by_color=by_color,
-                    coordinates=captured_coordinates,
-                )
-            )
-
     post_board = board
-    for capture in captures:
-        for coordinate in capture.coordinates:
-            post_board = post_board.with_cell(coordinate, "+")
-    return post_board, tuple(captures)
+    captured: dict[Cell, set[Coordinate]] = {cell: set() for cell, _, _ in capture_specs}
+    # Capture existing groups first. Entire groups containing a new stone wait
+    # until liberties have been recomputed after those captures.
+    for protected in (placed, frozenset[Coordinate]()):
+        phase: tuple[tuple[Cell, tuple[Coordinate, ...]], ...] = tuple(
+            (cell, _zero_liberty_coordinates(post_board, cell, protected))
+            for cell, _, _ in capture_specs
+        )
+        # Determine every removal on the same phase snapshot, including mutual
+        # suicides, before removing anything that could give another group air.
+        for cell, coordinates in phase:
+            captured[cell].update(coordinates)
+            for coordinate in coordinates:
+                post_board = post_board.with_cell(coordinate, "+")
+    captures = tuple(
+        CaptureEvent(
+            captured_color=color, by_color=by_color, coordinates=tuple(sorted(captured[cell]))
+        )
+        for cell, color, by_color in capture_specs
+        if captured[cell]
+    )
+    return post_board, captures
 
 
-def _zero_liberty_coordinates(board: Board, cell: Cell) -> tuple[Coordinate, ...]:
+def _zero_liberty_coordinates(
+    board: Board, cell: Cell, protected: frozenset[Coordinate]
+) -> tuple[Coordinate, ...]:
     captured: set[Coordinate] = set()
     for group in groups_for_cell(board, cell):
-        if not liberties(board, group):
+        if group.isdisjoint(protected) and not liberties(board, group):
             captured.update(group)
     return tuple(sorted(captured))
 
