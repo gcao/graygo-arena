@@ -301,7 +301,7 @@ def test_first_mutual_pass_keeps_game_running_and_scores() -> None:
 
     assert resolution.double_pass_count == 1
     assert resolution.game_finished is False
-    assert resolution.score_estimate == {"black": 1.0, "white": 1.0}
+    assert resolution.score_estimate == {"black": 4.5, "white": 4.5}
 
 
 def test_second_consecutive_mutual_pass_finishes_game() -> None:

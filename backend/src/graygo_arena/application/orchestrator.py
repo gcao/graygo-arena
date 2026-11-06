@@ -498,10 +498,19 @@ class GameOrchestrator:
             },
         )
         if status == "finished":
+            result = updated_game.result
+            assert result is not None
             finished_event = self._emit(
                 game.id,
                 "game.finished",
-                {"turn_index": str(turn.turn_index)},
+                {
+                    "turn_index": str(turn.turn_index),
+                    "black": str(result.black),
+                    "white": str(result.white),
+                    "winner": result.winner,
+                    "margin": str(result.margin),
+                    "all_stones_alive": "true",
+                },
             )
             events = (event, finished_event)
         else:

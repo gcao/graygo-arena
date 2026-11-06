@@ -110,6 +110,22 @@ h2 {
   white-space: nowrap;
 }
 
+.game-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.8rem;
+  padding: 0.8rem;
+  border: 1px solid #b8cec5;
+  border-radius: 6px;
+  background: #edf6f0;
+}
+
+.game-result small {
+  color: #52635b;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

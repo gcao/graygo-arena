@@ -582,6 +582,17 @@ export default function App() {
               <Toggle label="Captures" value={showCaptures} onChange={setShowCaptures} />
             </div>
           </div>
+          {game?.result ? (
+            <div aria-label="Final result" className="game-result" role="status">
+              <strong>
+                {game.result.winner === "draw"
+                  ? "Draw"
+                  : `${game.result.winner === "black" ? "Black" : "White"} wins by ${game.result.margin}`}
+              </strong>
+              <span>Black {game.result.black} · White {game.result.white}</span>
+              <small>All remaining stones counted as alive.</small>
+            </div>
+          ) : null}
           {game ? (
             <BoardGrid
               board={game.board}

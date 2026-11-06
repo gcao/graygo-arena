@@ -11,6 +11,7 @@ from graygo_arena.engine import (
     TurnResolution,
 )
 from graygo_arena.engine.moves import SeatColor
+from graygo_arena.engine.scoring import score_board
 
 type GameStatus = Literal["created", "running", "paused", "stopped", "finished", "error"]
 type InvalidMovePolicy = Literal["pass", "error", "forfeit"]
@@ -71,6 +72,15 @@ class SeatSession:
 
 
 @dataclass(frozen=True)
+class GameResult:
+    black: float
+    white: float
+    winner: Literal["black", "white", "draw"]
+    margin: float
+    all_stones_alive: bool = True
+
+
+@dataclass(frozen=True)
 class GameRecord:
     id: str
     board_size: int
@@ -85,6 +95,15 @@ class GameRecord:
     max_turns: int
     invalid_move_policy: InvalidMovePolicy
     show_private_summaries_in_ui: bool
+
+    @property
+    def result(self) -> GameResult | None:
+        if self.status != "finished":
+            return None
+        score = score_board(self.board)
+        black, white = score["black"], score["white"]
+        winner = "black" if black > white else "white" if white > black else "draw"
+        return GameResult(black=black, white=white, winner=winner, margin=abs(black - white))
 
 
 @dataclass(frozen=True)

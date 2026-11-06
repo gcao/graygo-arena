@@ -82,6 +82,28 @@ the second consecutive PASS/PASS round sets it to 2 and finishes the game. A rou
 with any placement resets the streak to 0. The configured maximum-turn limit is
 an independent ending condition.
 
+## Final scoring
+
+When a game finishes, the backend applies Chinese area counting to the resolved
+board, assuming **all remaining stones are alive**. No dead-group adjudication
+or prisoner count is needed. Black and white stones each count for their player;
+each gray stone contributes half a point to each player.
+
+Flood-fill each empty region using the board's four toroidal neighbors. Divide
+its area equally among its bordering factions, then divide gray's share equally
+between black and white. Thus black-only and white-only regions go entirely to
+their player; black/gray regions split 3:1, white/gray regions split 1:3, and
+regions touching both players, gray alone, or all three factions split equally.
+An entirely empty board also splits equally. The two scores always sum to the
+number of board intersections. There is no komi.
+
+Finished game responses include `result` with numeric `black`, `white`, and
+`margin`, a `winner` of `black`, `white`, or `draw`, and
+`all_stones_alive: true`. It is `null` before completion and for stopped games.
+The same result is available after a database reload and in exports. The
+`game.finished` event includes those values as strings, matching the existing
+event payload format. The UI displays the backend's scores and winner.
+
 ## Core design principle: the backend is the arbiter
 
 Do **not** let the AIs update the board. They are bad at doing exact game-state maintenance.

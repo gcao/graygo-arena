@@ -2,6 +2,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import httpx
+import pytest
 from fastapi.testclient import TestClient
 
 from graygo_arena.api.routes import AppServices, create_services
@@ -121,6 +122,7 @@ def test_two_consecutive_mutual_pass_rounds_finish_and_persist(tmp_path: Path) -
     assert first["game"]["status"] == "running"
     assert first["game"]["double_pass_count"] == 1
     assert first["turn"]["status"] == "resolved"
+    assert first["game"]["result"] is None
 
     reloaded = client_for(path)
     second = reloaded.post(f"/api/games/{game_id}/step").json()
@@ -128,6 +130,83 @@ def test_two_consecutive_mutual_pass_rounds_finish_and_persist(tmp_path: Path) -
     assert second["game"]["double_pass_count"] == 2
     assert second["turn"]["status"] == "finished"
     assert reloaded.get(f"/api/games/{game_id}").json()["current_turn"] == 2
+    assert second["game"]["result"] == {
+        "black": 4.5,
+        "white": 4.5,
+        "winner": "draw",
+        "margin": 0.0,
+        "all_stones_alive": True,
+    }
+
+
+@pytest.mark.parametrize("ending", ["provider_passes", "human_passes", "turn_limit"])
+@pytest.mark.parametrize(
+    ("board_key", "black", "white", "winner"),
+    [
+        ("B+G/+++/+++", 6.75, 2.25, "black"),
+        ("W+G/+++/+++", 2.25, 6.75, "white"),
+        ("G++/+++/+++", 4.5, 4.5, "draw"),
+    ],
+)
+def test_finished_result_survives_reload_and_is_in_events_and_export(
+    tmp_path: Path, ending: str, board_key: str, black: float, white: float, winner: str
+) -> None:
+    path = tmp_path / "results.db"
+    services = create_services(database_path=path)
+    client = TestClient(create_app(services))
+    provider = "human" if ending == "human_passes" else "scripted_pass"
+    game = client.post(
+        "/api/games",
+        json={
+            "board_size": 3,
+            "black": {"provider": provider},
+            "white": {"provider": provider},
+            "max_turns": 1 if ending == "turn_limit" else 200,
+        },
+    ).json()
+    game_id = game["id"]
+    services.repository.save_game(
+        replace(services.repository.get_game(game_id), board=Board.from_key(board_key))
+    )
+    assert game["result"] is None
+    client.post(f"/api/games/{game_id}/start")
+    rounds = 1 if ending == "turn_limit" else 2
+    response: httpx.Response | None = None
+    for turn in range(rounds):
+        if ending == "human_passes":
+            sealed = client.post(f"/api/games/{game_id}/human-moves/black", json={"move": "PASS"})
+            assert sealed.json()["game"]["result"] is None
+            response = client.post(f"/api/games/{game_id}/human-moves/white", json={"move": "PASS"})
+        else:
+            response = client.post(f"/api/games/{game_id}/step")
+        assert response.status_code == 200
+        if turn + 1 < rounds:
+            assert response.json()["game"]["result"] is None
+
+    expected = {
+        "black": black,
+        "white": white,
+        "winner": winner,
+        "margin": abs(black - white),
+        "all_stones_alive": True,
+    }
+    assert response is not None
+    assert response.json()["game"]["status"] == "finished"
+    assert response.json()["game"]["result"] == expected
+    reloaded = client_for(path)
+    assert reloaded.get(f"/api/games/{game_id}").json()["result"] == expected
+    assert reloaded.get(f"/api/games/{game_id}/export").json()["game"]["result"] == expected
+    events = reloaded.get(f"/api/games/{game_id}/events/list").json()
+    finished = [event for event in events if event["event_type"] == "game.finished"]
+    assert len(finished) == 1
+    assert finished[0]["payload"] == {
+        "turn_index": str(rounds - 1),
+        "black": str(black),
+        "white": str(white),
+        "winner": winner,
+        "margin": str(abs(black - white)),
+        "all_stones_alive": "true",
+    }
 
 
 def test_no_change_restrictions_accumulate_across_reload_and_passes(tmp_path: Path) -> None:

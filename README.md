@@ -162,6 +162,16 @@ curl -s http://127.0.0.1:8000/api/providers/test \
 
 If the response has `"ok": false`, fix `.env` before starting a match. The step API reports rejected provider credentials as `502` responses instead of server errors.
 
+## Finished Game Results
+
+Finished game responses include `result` with `black` and `white` scores,
+`winner` (`black`, `white`, or `draw`), `margin`, and `all_stones_alive: true`.
+The backend counts stones plus toroidal territory, treating all remaining
+stones as alive. Gray's share is divided evenly between the players; black/gray
+territory splits 3:1 and white/gray territory splits 1:3. Scores sum to the number
+of intersections, with no komi. The result is shown in the arena and included
+in exports and `game.finished` events. Before completion, `result` is `null`.
+
 ## Model And Reasoning
 
 `OPENAI_MODEL` can be any model name your account can use with the selected OpenAI mode. The frontend model field also accepts typed model names per seat, so you can override the advertised default when creating a game.

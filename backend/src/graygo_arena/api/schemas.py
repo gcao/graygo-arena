@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import cast
+from typing import Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -90,6 +90,16 @@ class PendingSeatMoveResponse(BaseModel):
     status: str = "none"
 
 
+class GameResultResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    black: float
+    white: float
+    winner: Literal["black", "white", "draw"]
+    margin: float
+    all_stones_alive: bool
+
+
 class GameResponse(BaseModel):
     id: str
     status: str
@@ -102,6 +112,7 @@ class GameResponse(BaseModel):
     white_seat_id: str
     double_pass_count: int
     max_turns: int
+    result: GameResultResponse | None
     pending_moves: dict[SeatColor, PendingSeatMoveResponse]
 
 
@@ -163,6 +174,7 @@ def provider_test_response(result: ProviderTestResult) -> ProviderTestResponse:
 
 def game_response(game: GameRecord, pending: dict[SeatColor, str] | None = None) -> GameResponse:
     pending_moves = pending or {"black": "none", "white": "none"}
+    result = game.result
     return GameResponse(
         id=game.id,
         status=game.status,
@@ -175,6 +187,7 @@ def game_response(game: GameRecord, pending: dict[SeatColor, str] | None = None)
         white_seat_id=game.white_seat_id,
         double_pass_count=game.double_pass_count,
         max_turns=game.max_turns,
+        result=GameResultResponse.model_validate(result) if result is not None else None,
         pending_moves={
             "black": PendingSeatMoveResponse(status=pending_moves.get("black", "none")),
             "white": PendingSeatMoveResponse(status=pending_moves.get("white", "none")),

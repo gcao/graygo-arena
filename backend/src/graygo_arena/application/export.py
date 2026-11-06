@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import asdict
 from typing import cast
 
 from graygo_arena.application.models import GameRepository
@@ -19,6 +20,7 @@ def build_export_bundle(repository: GameRepository, game_id: str) -> dict[str, o
     calls = repository.list_agent_calls(game_id)
     transcripts = repository.list_transcripts(game_id, "debug")
     events = repository.list_events(game_id)
+    result = game.result
     return cast(
         dict[str, object],
         _redact(
@@ -33,6 +35,7 @@ def build_export_bundle(repository: GameRepository, game_id: str) -> dict[str, o
                     "board_key": game.board.to_key(),
                     "double_pass_count": game.double_pass_count,
                     "max_turns": game.max_turns,
+                    "result": asdict(result) if result is not None else None,
                 },
                 "seats": [
                     {

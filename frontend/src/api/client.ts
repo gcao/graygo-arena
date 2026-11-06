@@ -32,6 +32,14 @@ export type CreateGameRequest = {
   invalid_move_policy: "pass";
 };
 
+export type GameResult = {
+  black: number;
+  white: number;
+  winner: "black" | "white" | "draw";
+  margin: number;
+  all_stones_alive: boolean;
+};
+
 export type GameResponse = {
   id: string;
   status: string;
@@ -44,6 +52,7 @@ export type GameResponse = {
   white_seat_id: string;
   double_pass_count: number;
   max_turns: number;
+  result: GameResult | null;
   pending_moves: Record<SeatColor, PendingSeatMove>;
 };
 
