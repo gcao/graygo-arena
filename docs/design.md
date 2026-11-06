@@ -52,6 +52,14 @@ I would use **FastAPI + Python** for the backend because you already have Python
 
 API tokens should stay entirely on the backend. OpenAI explicitly warns not to expose API keys in browser/client code and recommends loading them from environment variables or server-side key management; the OpenAI API uses bearer authentication. ([OpenAI Platform][1]) Anthropic’s direct Claude API uses `x-api-key`, `anthropic-version`, and `content-type` headers, while Claude Code OAuth-style tokens are specifically a Claude Code/CLI authentication path rather than the normal direct Claude API path. ([Claude API Docs][2])
 
+## Pass termination
+
+A game ends after **two consecutive simultaneous rounds where both players choose
+PASS**. The first PASS/PASS round sets `double_pass_count` to 1 and play continues;
+the second consecutive PASS/PASS round sets it to 2 and finishes the game. A round
+with any placement resets the streak to 0. The configured maximum-turn limit is
+an independent ending condition.
+
 ## Core design principle: the backend is the arbiter
 
 Do **not** let the AIs update the board. They are bad at doing exact game-state maintenance.

@@ -128,14 +128,45 @@ def test_forbidden_point_blocks_only_matching_color() -> None:
     assert resolution.post_board_key == "+++/+B+/+++"
 
 
-def test_pass_pass_finishes_game_and_scores() -> None:
+def test_first_mutual_pass_keeps_game_running_and_scores() -> None:
     state = GameState(board=Board.from_key("B++/+W+/++G"))
 
     resolution = resolve_turn(state, PassMove(), PassMove())
 
     assert resolution.double_pass_count == 1
-    assert resolution.game_finished is True
+    assert resolution.game_finished is False
     assert resolution.score_estimate == {"black": 1.0, "white": 1.0}
+
+
+def test_second_consecutive_mutual_pass_finishes_game() -> None:
+    first = resolve_turn(GameState(board=Board.from_key("B++/+W+/++G")), PassMove(), PassMove())
+
+    second = resolve_turn(first.post_state, PassMove(), PassMove())
+
+    assert second.double_pass_count == 2
+    assert second.post_state.double_pass_count == 2
+    assert second.game_finished is True
+    assert second.score_estimate == first.score_estimate
+
+
+@pytest.mark.parametrize("black_places", [True, False])
+def test_either_player_placing_requires_two_new_mutual_pass_rounds(black_places: bool) -> None:
+    first = resolve_turn(GameState(board=Board.empty(3)), PassMove(), PassMove())
+    placement = move("b2", size=3)
+    interrupted = resolve_turn(
+        first.post_state,
+        placement if black_places else PassMove(),
+        PassMove() if black_places else placement,
+    )
+    restarted = resolve_turn(interrupted.post_state, PassMove(), PassMove())
+    finished = resolve_turn(restarted.post_state, PassMove(), PassMove())
+
+    assert interrupted.double_pass_count == 0
+    assert interrupted.game_finished is False
+    assert restarted.double_pass_count == 1
+    assert restarted.game_finished is False
+    assert finished.double_pass_count == 2
+    assert finished.game_finished is True
 
 
 def test_pass_plus_placement_does_not_collide_and_resets_double_pass_count() -> None:

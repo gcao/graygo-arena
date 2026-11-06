@@ -23,7 +23,8 @@ type CapturedColor = Literal["black", "white", "gray"]
 type CaptureByColor = Literal["black", "white", "neutral"]
 type Ruleset = Literal["graygo-v1"]
 
-DOUBLE_PASS_FINISH_THRESHOLD = 1
+# Count consecutive simultaneous PASS/PASS rounds, not individual pass moves.
+DOUBLE_PASS_FINISH_THRESHOLD = 2
 
 
 def _empty_forbidden() -> ForbiddenState:

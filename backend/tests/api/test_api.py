@@ -101,6 +101,33 @@ def test_event_endpoints_include_sse_shell_headers(tmp_path: Path) -> None:
     assert stream.headers["content-type"].startswith("text/event-stream")
 
 
+def test_two_consecutive_mutual_pass_rounds_finish_and_persist(tmp_path: Path) -> None:
+    path = tmp_path / "passes.db"
+    client = client_for(path)
+    game = client.post(
+        "/api/games",
+        json={
+            "board_size": 3,
+            "black": {"provider": "scripted_pass", "model": "default"},
+            "white": {"provider": "scripted_pass", "model": "default"},
+        },
+    ).json()
+    game_id = game["id"]
+    client.post(f"/api/games/{game_id}/start")
+
+    first = client.post(f"/api/games/{game_id}/step").json()
+    assert first["game"]["status"] == "running"
+    assert first["game"]["double_pass_count"] == 1
+    assert first["turn"]["status"] == "resolved"
+
+    reloaded = client_for(path)
+    second = reloaded.post(f"/api/games/{game_id}/step").json()
+    assert second["game"]["status"] == "finished"
+    assert second["game"]["double_pass_count"] == 2
+    assert second["turn"]["status"] == "finished"
+    assert reloaded.get(f"/api/games/{game_id}").json()["current_turn"] == 2
+
+
 def test_step_reports_provider_auth_failure_without_500(tmp_path: Path) -> None:
     def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(401, json={"error": {"message": "invalid credentials"}})

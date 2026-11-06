@@ -13,7 +13,7 @@
 - [x] **ENG-04**: System converts same-point simultaneous placements into gray collision points according to the Gray Go ruleset.
 - [x] **ENG-05**: System computes toroidal neighbors, groups, and liberties consistently for all board positions.
 - [x] **ENG-06**: System applies two-stage captures and forbidden-point updates deterministically.
-- [x] **ENG-07**: System tracks double-pass state and computes a final score or score estimate when a game ends.
+- [x] **ENG-07**: System ends after two consecutive simultaneous PASS/PASS rounds, resets the streak on any placement, and computes a final score or score estimate when a game ends.
 - [x] **ENG-08**: Automated tests cover legal move validation, toroidal liberties, collision-to-gray behavior, captures, forbidden points, pass handling, and scoring.
 
 ### Orchestration

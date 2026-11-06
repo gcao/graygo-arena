@@ -274,9 +274,7 @@ def test_human_vs_human_resolves_after_both_moves_are_sealed() -> None:
 
 def test_human_vs_computer_primes_computer_move_before_human_submit() -> None:
     orchestrator, repo, _, white_provider = make_orchestrator(["d4"], ["d5"])
-    game = orchestrator.create_game(
-        command(black=SeatConfig("human", "local", "human"))
-    )
+    game = orchestrator.create_game(command(black=SeatConfig("human", "local", "human")))
 
     orchestrator.start_game(game.id)
     _wait_for(lambda: len(repo.get_pending_moves(game.id, 0)) == 1)
@@ -307,6 +305,25 @@ def test_autorun_stops_at_max_turns() -> None:
 
     assert len(results) == 2
     assert results[-1].game.status == "finished"
+
+
+def test_mutual_pass_requires_two_rounds_and_forwards_the_streak_to_both_seats() -> None:
+    orchestrator, repo, black, white = make_orchestrator(["PASS", "PASS"], ["PASS", "PASS"])
+    game = orchestrator.create_game(command())
+    orchestrator.start_game(game.id)
+
+    first = orchestrator.step_game(game.id)
+    second = orchestrator.step_game(game.id)
+
+    assert first.game.status == "running"
+    assert first.game.double_pass_count == 1
+    assert first.turn is not None and first.turn.status == "resolved"
+    assert second.game.status == "finished"
+    assert second.game.double_pass_count == 2
+    assert second.turn is not None and second.turn.status == "finished"
+    assert [r.mutual_pass_streak for r in black.requests] == [0, 1]
+    assert [r.mutual_pass_streak for r in white.requests] == [0, 1]
+    assert len([e for e in repo.events if e.event_type == "game.finished"]) == 1
 
 
 def test_cannot_step_paused_game() -> None:

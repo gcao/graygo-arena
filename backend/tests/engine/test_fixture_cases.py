@@ -17,6 +17,7 @@ def test_fixture_cases(case: EngineCase) -> None:
 
     assert resolution.post_board_key == case.post_board_key
     actual_event_types = _event_types(resolution)
+    assert resolution.game_finished is ("game_finished" in case.expected_event_types)
     for event_type in case.expected_event_types:
         assert event_type in actual_event_types
 
