@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 
 import httpx
@@ -6,6 +7,7 @@ from fastapi.testclient import TestClient
 from graygo_arena.api.routes import AppServices, create_services
 from graygo_arena.application.orchestrator import GameOrchestrator
 from graygo_arena.core.config import Settings
+from graygo_arena.engine import Board, Coordinate
 from graygo_arena.main import create_app
 from graygo_arena.persistence.database import SQLiteDatabase
 from graygo_arena.persistence.repositories import SQLiteRepository
@@ -126,6 +128,49 @@ def test_two_consecutive_mutual_pass_rounds_finish_and_persist(tmp_path: Path) -
     assert second["game"]["double_pass_count"] == 2
     assert second["turn"]["status"] == "finished"
     assert reloaded.get(f"/api/games/{game_id}").json()["current_turn"] == 2
+
+
+def test_no_change_restrictions_accumulate_across_reload_and_passes(tmp_path: Path) -> None:
+    path = tmp_path / "forbidden.db"
+    services = create_services(database_path=path)
+    client = TestClient(create_app(services))
+    game_id = client.post(
+        "/api/games",
+        json={
+            "board_size": 7,
+            "black": {"provider": "human", "model": "local"},
+            "white": {"provider": "human", "model": "local"},
+        },
+    ).json()["id"]
+    board = Board.from_key("+W+++++/W+W++++/+W+++++/+++++++/+W+++B+/W+W+B+B/+W+++B+")
+    services.repository.save_game(replace(services.repository.get_game(game_id), board=board))
+    client.post(f"/api/games/{game_id}/start")
+
+    def play(active: TestClient, black: str, white: str) -> httpx.Response:
+        assert (
+            active.post(f"/api/games/{game_id}/human-moves/black", json={"move": black}).status_code
+            == 200
+        )
+        return active.post(f"/api/games/{game_id}/human-moves/white", json={"move": white})
+
+    assert play(client, "b2", "PASS").status_code == 200
+    reloaded = client_for(path)
+    assert play(reloaded, "f2", "f6").status_code == 200
+    assert play(reloaded, "PASS", "PASS").json()["game"]["double_pass_count"] == 1
+    game = services.repository.get_game(game_id)
+    assert game.board == board
+    assert game.forbidden.black == frozenset({Coordinate.parse("b2", 7), Coordinate.parse("f2", 7)})
+    assert game.forbidden.white == frozenset({Coordinate.parse("f6", 7)})
+    for color, move in (("black", "b2"), ("black", "f2"), ("white", "f6")):
+        blocked = reloaded.post(f"/api/games/{game_id}/human-moves/{color}", json={"move": move})
+        assert blocked.status_code == 409
+        assert "illegal" in blocked.json()["detail"]
+    assert services.repository.get_game(game_id).current_turn == 3
+
+    assert play(reloaded, "d4", "PASS").status_code == 200
+    assert not services.repository.get_game(game_id).forbidden.black
+    assert not services.repository.get_game(game_id).forbidden.white
+    assert play(reloaded, "b2", "PASS").status_code == 200
 
 
 def test_step_reports_provider_auth_failure_without_500(tmp_path: Path) -> None:

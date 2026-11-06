@@ -97,7 +97,9 @@ def resolve_turn(state: GameState, black_move: MoveLike, white_move: MoveLike) -
     )
     placed = frozenset(event.coordinate for event in placement_events)
     post_board, captures = _apply_captures(post_board, placed)
-    forbidden, forbidden_updates = _forbidden_from_captures(captures)
+    forbidden, forbidden_updates = _forbidden_after_round(
+        state, post_board, black_move, white_move, captures
+    )
     double_pass_count = (
         state.double_pass_count + 1
         if isinstance(black_move, PassMove) and isinstance(white_move, PassMove)
@@ -220,6 +222,37 @@ def _zero_liberty_coordinates(
         if group.isdisjoint(protected) and not liberties(board, group):
             captured.update(group)
     return tuple(sorted(captured))
+
+
+def _forbidden_after_round(
+    state: GameState,
+    board: Board,
+    black_move: MoveLike,
+    white_move: MoveLike,
+    captures: tuple[CaptureEvent, ...],
+) -> tuple[ForbiddenState, tuple[ForbiddenUpdate, ...]]:
+    if board != state.board:
+        return _forbidden_from_captures(captures)
+
+    # No-change rounds accumulate each seat's attempted placements. Passes
+    # preserve the existing restrictions and never become forbidden themselves.
+    points: dict[SeatColor, set[Coordinate]] = {
+        "black": set(state.forbidden.black),
+        "white": set(state.forbidden.white),
+    }
+    updates: list[ForbiddenUpdate] = []
+    placements: tuple[tuple[SeatColor, MoveLike], ...] = (
+        ("black", black_move),
+        ("white", white_move),
+    )
+    for color, move in placements:
+        if isinstance(move, Move):
+            if move.coordinate not in points[color]:
+                updates.append(ForbiddenUpdate(color=color, coordinates=(move.coordinate,)))
+            points[color].add(move.coordinate)
+    return ForbiddenState(
+        black=frozenset(points["black"]), white=frozenset(points["white"])
+    ), tuple(updates)
 
 
 def _forbidden_from_captures(

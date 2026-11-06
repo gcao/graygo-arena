@@ -238,6 +238,62 @@ def test_forbidden_point_blocks_only_matching_color() -> None:
     assert resolution.post_board_key == "+++/+B+/+++"
 
 
+def test_no_change_moves_accumulate_separately_and_passes_preserve_them() -> None:
+    state = GameState(
+        board=Board.from_key("+W+++++/W+W++++/+W+++++/+++++++/+W+++B+/W+W+B+B/+W+++B+")
+    )
+    x, y, z = move("b2"), move("f2"), move("f6")
+
+    first = resolve_turn(state, x, PassMove())
+    second = resolve_turn(first.post_state, y, z)
+    passed = resolve_turn(second.post_state, PassMove(), PassMove())
+
+    assert (
+        first.post_board_key
+        == second.post_board_key
+        == passed.post_board_key
+        == state.board.to_key()
+    )
+    assert first.post_state.forbidden.black == frozenset({x.coordinate})
+    assert first.post_state.forbidden.white == frozenset()
+    assert second.post_state.forbidden.black == frozenset({x.coordinate, y.coordinate})
+    assert second.post_state.forbidden.white == frozenset({z.coordinate})
+    assert passed.post_state.forbidden == second.post_state.forbidden
+    assert passed.double_pass_count == 1 and not passed.game_finished
+    with pytest.raises(ValueError, match="illegal black move"):
+        resolve_turn(passed.post_state, x, PassMove())
+    with pytest.raises(ValueError, match="illegal white move"):
+        resolve_turn(passed.post_state, PassMove(), z)
+    finished = resolve_turn(passed.post_state, PassMove(), PassMove())
+    assert finished.game_finished is True
+
+
+def test_board_change_releases_prior_no_change_restrictions() -> None:
+    state = GameState(board=Board.from_key("+++++/++W++/+W+W+/++W++/+++++"))
+    x = move("c3", size=5)
+    suicidal = resolve_turn(state, x, PassMove())
+    passed = resolve_turn(suicidal.post_state, PassMove(), PassMove())
+
+    changed = resolve_turn(passed.post_state, move("a1", size=5), PassMove())
+
+    assert changed.post_board_key != state.board.to_key()
+    assert changed.post_state.forbidden == ForbiddenState()
+    # The previously forbidden point can be selected again on the changed board.
+    repeated = resolve_turn(changed.post_state, x, PassMove())
+    assert x.coordinate in repeated.post_state.forbidden.black
+
+
+def test_disappearing_collision_bans_the_point_for_both_seats_across_passes() -> None:
+    state = GameState(board=Board.from_key("+WW/W+W/WWW"))
+    x = move("a1", size=3)
+    collision = resolve_turn(state, x, x)
+    passed = resolve_turn(collision.post_state, PassMove(), PassMove())
+
+    assert collision.post_board_key == state.board.to_key()
+    assert passed.post_state.forbidden.black == frozenset({x.coordinate})
+    assert passed.post_state.forbidden.white == frozenset({x.coordinate})
+
+
 def test_first_mutual_pass_keeps_game_running_and_scores() -> None:
     state = GameState(board=Board.from_key("B++/+W+/++G"))
 

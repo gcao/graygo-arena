@@ -52,6 +52,16 @@ I would use **FastAPI + Python** for the backend because you already have Python
 
 API tokens should stay entirely on the backend. OpenAI explicitly warns not to expose API keys in browser/client code and recommends loading them from environment variables or server-side key management; the OpenAI API uses bearer authentication. ([OpenAI Platform][1]) Anthropic’s direct Claude API uses `x-api-key`, `anthropic-version`, and `content-type` headers, while Claude Code OAuth-style tokens are specifically a Claude Code/CLI authentication path rather than the normal direct Claude API path. ([Claude API Docs][2])
 
+## No-change placement restrictions
+
+Black and white maintain separate forbidden sets. After any round whose resolved
+stone board is unchanged, add each non-pass placement to that player's existing
+set. Thus A's suicidal `x`, followed by suicidal `y` for A and `z` for B, leaves
+A forbidden at `{x, y}` and B at `{z}`. A PASS/PASS round preserves both sets.
+Pass itself is always allowed. Prior no-change restrictions are released when
+the stone board changes; a counter or restriction-set change alone does not
+count as a stone-board change.
+
 ## Captures before suicide
 
 After both placements (or a collision-created gray stone), remove all
