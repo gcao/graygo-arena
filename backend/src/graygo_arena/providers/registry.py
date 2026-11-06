@@ -5,6 +5,7 @@ from __future__ import annotations
 import httpx
 
 from graygo_arena.application.models import ProviderAdapter, ProviderMoveRequest, SeatSession
+from graygo_arena.core.codex_auth import CodexOAuthCredentials
 from graygo_arena.core.config import Settings, load_settings
 from graygo_arena.providers.base import ProviderInfo, ProviderTestResult
 from graygo_arena.providers.champion_model import LoopChampionProvider, SnapshotPolicyProvider
@@ -72,6 +73,13 @@ class ProviderCatalog:
             )
         if self._settings.openai_auth_token:
             if self._settings.openai_auth_source == "codex_oauth":
+                credentials = (
+                    CodexOAuthCredentials(
+                        self._settings.openai_codex_auth_file, self._settings.openai_codex_binary
+                    )
+                    if self._settings.openai_codex_auth_file
+                    else None
+                )
                 self._adapters["openai_default"] = OpenAICodexResponsesProvider(
                     auth_token=self._settings.openai_auth_token,
                     default_model=self._settings.openai_model,
@@ -79,6 +87,7 @@ class ProviderCatalog:
                     client=http_client,
                     base_url=self._settings.openai_codex_base_url,
                     originator=self._settings.openai_codex_originator,
+                    token_loader=credentials.access_token if credentials else None,
                 )
             else:
                 self._adapters["openai_default"] = OpenAIResponsesProvider(

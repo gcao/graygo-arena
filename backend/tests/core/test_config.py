@@ -63,7 +63,7 @@ def test_load_settings_accepts_codex_oauth_access_token(
     assert settings.openai_auth_token == codex_jwt()
     assert settings.openai_auth_source == "codex_oauth"
     assert settings.openai_auth_error is None
-    assert settings.openai_model == "gpt-5.5"
+    assert settings.openai_model == "gpt-6.1-terra"
     assert settings.openai_codex_base_url == "https://chatgpt.com/backend-api"
     assert settings.openai_codex_originator == "pi"
 
@@ -93,3 +93,28 @@ def test_load_settings_rejects_unknown_reasoning_effort(
 
     with pytest.raises(ValueError, match="OPENAI_REASONING_EFFORT"):
         load_settings()
+
+
+@pytest.mark.parametrize("model", [None, "explicit-model"])
+def test_managed_codex_login_takes_precedence_over_static_token(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, model: str | None
+) -> None:
+    auth_file = tmp_path / "auth.json"
+    auth_file.write_text(
+        json.dumps({"auth_mode": "chatgpt", "tokens": {"access_token": codex_jwt()}})
+    )
+    monkeypatch.setenv("GRAYGO_ENV_FILE", "/dev/null")
+    monkeypatch.setenv("OPENAI_CODEX_AUTH_FILE", str(auth_file))
+    monkeypatch.setenv("OPENAI_CODEX_TOKEN", "eyJ.stale.token")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_CODEX_API_KEY", raising=False)
+    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+    if model:
+        monkeypatch.setenv("OPENAI_MODEL", model)
+
+    settings = load_settings()
+
+    assert settings.openai_auth_source == "codex_oauth"
+    assert settings.openai_auth_token == codex_jwt()
+    assert settings.openai_codex_auth_file == auth_file
+    assert settings.openai_model == (model or "gpt-6.1-terra")

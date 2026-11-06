@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+from collections.abc import Callable
 from typing import Any, NoReturn, cast
 
 import httpx
@@ -118,6 +119,7 @@ class OpenAICodexResponsesProvider:
         client: httpx.Client | None = None,
         base_url: str = "https://chatgpt.com/backend-api",
         originator: str = "pi",
+        token_loader: Callable[[], str] | None = None,
     ) -> None:
         self._auth_token = auth_token
         self._default_model = default_model
@@ -125,12 +127,19 @@ class OpenAICodexResponsesProvider:
         self._client = client or httpx.Client(timeout=60)
         self._base_url = base_url
         self._originator = originator
+        self._token_loader = token_loader
 
     def request_move(self, request: ProviderMoveRequest, seat: SeatSession) -> ProviderMoveResponse:
-        if not self._auth_token:
+        try:
+            token = self._token_loader() if self._token_loader else self._auth_token
+        except (OSError, ValueError) as exc:
+            raise ProviderCredentialError(
+                "Cannot use the Codex ChatGPT login; run codex login"
+            ) from exc
+        if not token:
             raise ProviderCredentialError("OPENAI_CODEX_TOKEN is not configured")
         model = seat.model or self._default_model
-        account_id = _extract_codex_account_id(self._auth_token)
+        account_id = _extract_codex_account_id(token)
         payload: dict[str, object] = {
             "model": model,
             "store": False,
@@ -159,7 +168,7 @@ class OpenAICodexResponsesProvider:
             client=self._client,
             url=_resolve_codex_responses_url(self._base_url),
             headers={
-                "Authorization": f"Bearer {self._auth_token}",
+                "Authorization": f"Bearer {token}",
                 "chatgpt-account-id": account_id,
                 "OpenAI-Beta": "responses=experimental",
                 "originator": self._originator,
@@ -242,9 +251,7 @@ def _move_prompt(request: ProviderMoveRequest, seat: SeatSession) -> str:
             "Board:",
             *request.board_rows,
             f"Forbidden for you: {', '.join(request.own_forbidden) or 'none'}",
-            (
-                "Forbidden points are not legal for you even when they are empty on the board."
-            ),
+            ("Forbidden points are not legal for you even when they are empty on the board."),
             f"Legal moves: {', '.join(request.legal_moves)}",
             "The move value must exactly match one of the Legal moves entries.",
             (

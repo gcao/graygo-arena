@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
 
+from graygo_arena.core.codex_auth import read_access_token
+
 type OpenAIAuthSource = Literal["api_key", "codex_api_key", "codex_oauth", "none"]
 type OpenAIReasoningEffort = Literal["none", "minimal", "low", "medium", "high", "xhigh"]
 
@@ -28,6 +30,8 @@ class Settings:
     openai_max_output_tokens: int = 2048
     openai_codex_base_url: str = "https://chatgpt.com/backend-api"
     openai_codex_originator: str = "pi"
+    openai_codex_auth_file: Path | None = None
+    openai_codex_binary: str = "codex"
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-sonnet-4-20250514"
     graygo_model_repo: Path = Path("../graygo")
@@ -65,6 +69,8 @@ def load_settings() -> Settings:
             "OPENAI_CODEX_BASE_URL", "https://chatgpt.com/backend-api"
         ),
         openai_codex_originator=values.get("OPENAI_CODEX_ORIGINATOR", "pi"),
+        openai_codex_auth_file=_optional_path(values.get("OPENAI_CODEX_AUTH_FILE")),
+        openai_codex_binary=values.get("OPENAI_CODEX_BINARY", "codex"),
         anthropic_api_key=_non_empty(values.get("ANTHROPIC_API_KEY")),
         anthropic_model=values.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514"),
         graygo_model_repo=graygo_model_repo,
@@ -191,6 +197,12 @@ def _openai_auth(values: dict[str, str]) -> tuple[str | None, OpenAIAuthSource, 
     codex_api_key = _non_empty(values.get("OPENAI_CODEX_API_KEY"))
     if codex_api_key is not None:
         return codex_api_key, "codex_api_key", None
+    auth_file = _optional_path(values.get("OPENAI_CODEX_AUTH_FILE"))
+    if auth_file is not None:
+        try:
+            return read_access_token(auth_file), "codex_oauth", None
+        except ValueError:
+            return None, "none", "Cannot read configured Codex ChatGPT login; run codex login"
     legacy_codex_value = _non_empty(values.get("OPENAI_CODEX_TOKEN")) or _non_empty(
         values.get("CODEX_TOKEN")
     )
@@ -213,7 +225,7 @@ def _openai_auth(values: dict[str, str]) -> tuple[str | None, OpenAIAuthSource, 
 
 def _default_openai_model(source: OpenAIAuthSource) -> str:
     if source == "codex_oauth":
-        return "gpt-5.5"
+        return "gpt-6.1-terra"
     return "gpt-5.1-codex-max"
 
 

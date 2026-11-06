@@ -93,40 +93,33 @@ OPENAI_MAX_OUTPUT_TOKENS=4096
 
 `OPENAI_API_KEY` takes precedence over `OPENAI_CODEX_API_KEY`.
 
-Codex OAuth token setup:
-
-```sh
-OPENAI_CODEX_TOKEN=eyJ...
-OPENAI_MODEL=gpt-5.5
-OPENAI_REASONING_EFFORT=xhigh
-```
-
-The OAuth token mode uses the same ChatGPT Codex backend pattern as GSD-2: it calls `https://chatgpt.com/backend-api/codex/responses`, extracts `chatgpt_account_id` from the JWT, and sends that value as `chatgpt-account-id`. It does not send the OAuth token to `api.openai.com/v1/responses`.
-
-To get the Codex OAuth access token from a local Codex login:
+ChatGPT OAuth setup with an existing managed Codex login:
 
 ```sh
 codex login
-node <<'NODE'
-const fs = require("fs");
-const path = `${process.env.HOME}/.codex/auth.json`;
-const auth = JSON.parse(fs.readFileSync(path, "utf8"));
-const token = auth.tokens?.access_token || auth.OPENAI_CODEX_TOKEN || "";
-if (!token || !token.startsWith("eyJ")) {
-  throw new Error("No Codex OAuth access token found in ~/.codex/auth.json");
-}
-console.log(token);
-NODE
 ```
 
-Add the printed value to repo-root `.env` as `OPENAI_CODEX_TOKEN=...`. Optional Codex OAuth overrides are:
+Then configure the arena's `.env`:
+
+```sh
+OPENAI_CODEX_AUTH_FILE=~/.codex/auth.json
+OPENAI_CODEX_BINARY=codex
+OPENAI_MODEL=gpt-6.1-terra
+OPENAI_REASONING_EFFORT=xhigh
+```
+
+Use an absolute `OPENAI_CODEX_BINARY` path if Codex is not on the server's PATH. The arena rereads the managed login before each request. When its access token approaches expiry, it asks Codex's `account/read` RPC to renew it; Codex owns refresh-token storage and rotation. The file must be the managed Codex `auth.json`, including when using a custom Codex home directory.
+
+OAuth requests use `https://chatgpt.com/backend-api/codex/responses` and the login's account header. Credentials remain on the backend. A static `OPENAI_CODEX_TOKEN=eyJ...` is also supported, but its renewal must be managed separately.
+
+Optional OAuth overrides are:
 
 ```sh
 OPENAI_CODEX_BASE_URL=https://chatgpt.com/backend-api
 OPENAI_CODEX_ORIGINATOR=pi
 ```
 
-Credential precedence is `OPENAI_API_KEY`, then `OPENAI_CODEX_API_KEY`, then `OPENAI_CODEX_TOKEN` or `CODEX_TOKEN`.
+Credential precedence is `OPENAI_API_KEY`, then `OPENAI_CODEX_API_KEY`, then `OPENAI_CODEX_AUTH_FILE`, then `OPENAI_CODEX_TOKEN` or `CODEX_TOKEN`.
 
 Codex CLI sign-in may create a separate auto-generated API key. If your local auth file stores that key, this prints only an API-key-shaped value:
 
@@ -164,7 +157,7 @@ Before creating an OpenAI-backed game, test the configured credential:
 ```sh
 curl -s http://127.0.0.1:8000/api/providers/test \
   -H 'Content-Type: application/json' \
-  -d '{"provider":"openai_default","model":"gpt-5.5"}'
+  -d '{"provider":"openai_default","model":"gpt-6.1-terra"}'
 ```
 
 If the response has `"ok": false`, fix `.env` before starting a match. The step API reports rejected provider credentials as `502` responses instead of server errors.

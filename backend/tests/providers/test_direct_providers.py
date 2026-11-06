@@ -1,5 +1,6 @@
 import base64
 import json
+from dataclasses import replace
 from typing import cast
 
 import httpx
@@ -128,15 +129,18 @@ def test_codex_oauth_adapter_uses_chatgpt_backend_headers_and_parses_sse() -> No
         )
 
     provider = OpenAICodexResponsesProvider(
-        auth_token=codex_jwt("acc_123"),
-        default_model="gpt-5.5",
+        auth_token=codex_jwt("stale_account"),
+        token_loader=lambda: codex_jwt("acc_123"),
+        default_model="gpt-6.1-terra",
         reasoning_effort="xhigh",
         client=httpx.Client(transport=httpx.MockTransport(handler)),
         base_url="https://chatgpt.test/backend-api",
         originator="pi",
     )
 
-    response = provider.request_move(move_request(), seat("openai_default"))
+    response = provider.request_move(
+        move_request(), replace(seat("openai_default"), model="gpt-6.1-terra")
+    )
 
     payload = captured["payload"]
     assert isinstance(payload, dict)
@@ -147,7 +151,7 @@ def test_codex_oauth_adapter_uses_chatgpt_backend_headers_and_parses_sse() -> No
     assert captured["beta"] == "responses=experimental"
     assert captured["originator"] == "pi"
     assert captured["accept"] == "text/event-stream"
-    assert payload_dict["model"] == "model_from_seat"
+    assert payload_dict["model"] == "gpt-6.1-terra"
     assert payload_dict["stream"] is True
     assert payload_dict["reasoning"] == {"effort": "xhigh", "summary": "auto"}
     instructions = payload_dict["instructions"]
