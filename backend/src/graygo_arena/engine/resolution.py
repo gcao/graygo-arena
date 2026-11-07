@@ -14,7 +14,9 @@ from graygo_arena.engine.moves import (
     PassMove,
     SeatColor,
     legal_moves,
+    parse_move,
 )
+from graygo_arena.engine.repetition import RoundHistory, forbidden_after_round
 from graygo_arena.engine.rules import groups_for_cell, liberties
 from graygo_arena.engine.scoring import score_board
 
@@ -38,6 +40,7 @@ class GameState:
     double_pass_count: int = 0
     turn_index: int = 0
     ruleset: Ruleset = "graygo-v1"
+    history: tuple[RoundHistory, ...] = ()
 
     def __post_init__(self) -> None:
         if self.ruleset != "graygo-v1":
@@ -49,6 +52,13 @@ class GameState:
         if self.turn_index < 0:
             msg = "turn_index cannot be negative"
             raise ValueError(msg)
+        if len(self.history) > 2:
+            raise ValueError("only the last two rounds belong in repetition history")
+        for round_ in self.history:
+            if Board.from_key(round_.pre_board_key).size != self.board.size:
+                raise ValueError("repetition history board size differs")
+            parse_move(round_.black_move, self.board.size)
+            parse_move(round_.white_move, self.board.size)
         for coordinate in self.forbidden.black | self.forbidden.white:
             coordinate.require_inside(self.board.size)
 
@@ -97,9 +107,7 @@ def resolve_turn(state: GameState, black_move: MoveLike, white_move: MoveLike) -
     )
     placed = frozenset(event.coordinate for event in placement_events)
     post_board, captures = _apply_captures(post_board, placed)
-    forbidden, forbidden_updates = _forbidden_after_round(
-        state, post_board, black_move, white_move, captures
-    )
+    forbidden, forbidden_updates = _forbidden_after_round(state, post_board, black_move, white_move)
     double_pass_count = (
         state.double_pass_count + 1
         if isinstance(black_move, PassMove) and isinstance(white_move, PassMove)
@@ -113,6 +121,10 @@ def resolve_turn(state: GameState, black_move: MoveLike, white_move: MoveLike) -
         double_pass_count=double_pass_count,
         turn_index=state.turn_index + 1,
         ruleset=state.ruleset,
+        history=(
+            *state.history,
+            RoundHistory(state.board.to_key(), black_move.label, white_move.label),
+        )[-2:],
     )
 
     return TurnResolution(
@@ -229,67 +241,17 @@ def _forbidden_after_round(
     board: Board,
     black_move: MoveLike,
     white_move: MoveLike,
-    captures: tuple[CaptureEvent, ...],
 ) -> tuple[ForbiddenState, tuple[ForbiddenUpdate, ...]]:
-    if board != state.board:
-        return _forbidden_from_captures(captures)
-
-    # No-change rounds accumulate each seat's attempted placements. Passes
-    # preserve the existing restrictions and never become forbidden themselves.
-    points: dict[SeatColor, set[Coordinate]] = {
-        "black": set(state.forbidden.black),
-        "white": set(state.forbidden.white),
-    }
-    updates: list[ForbiddenUpdate] = []
-    placements: tuple[tuple[SeatColor, MoveLike], ...] = (
-        ("black", black_move),
-        ("white", white_move),
+    forbidden = forbidden_after_round(
+        state.board, board, state.forbidden, black_move, white_move, state.history
     )
-    for color, move in placements:
-        if isinstance(move, Move):
-            if move.coordinate not in points[color]:
-                updates.append(ForbiddenUpdate(color=color, coordinates=(move.coordinate,)))
-            points[color].add(move.coordinate)
-    return ForbiddenState(
-        black=frozenset(points["black"]), white=frozenset(points["white"])
-    ), tuple(updates)
-
-
-def _forbidden_from_captures(
-    captures: tuple[CaptureEvent, ...],
-) -> tuple[ForbiddenState, tuple[ForbiddenUpdate, ...]]:
-    black_forbidden: set[Coordinate] = set()
-    white_forbidden: set[Coordinate] = set()
-    updates: list[ForbiddenUpdate] = []
-
-    for capture in captures:
-        coordinates = tuple(sorted(capture.coordinates))
-        if capture.captured_color == "gray":
-            black_forbidden.update(coordinates)
-            white_forbidden.update(coordinates)
-            updates.append(ForbiddenUpdate(color="black", coordinates=coordinates))
-            updates.append(ForbiddenUpdate(color="white", coordinates=coordinates))
-        elif capture.captured_color == "black":
-            black_forbidden.update(coordinates)
-            updates.append(
-                ForbiddenUpdate(
-                    color=capture.captured_color,
-                    coordinates=coordinates,
-                )
-            )
-        else:
-            white_forbidden.update(coordinates)
-            updates.append(
-                ForbiddenUpdate(
-                    color=capture.captured_color,
-                    coordinates=coordinates,
-                )
-            )
-
-    return (
-        ForbiddenState(
-            black=frozenset(black_forbidden),
-            white=frozenset(white_forbidden),
-        ),
-        tuple(updates),
+    changes: tuple[tuple[SeatColor, frozenset[Coordinate], frozenset[Coordinate]], ...] = (
+        ("black", forbidden.black, state.forbidden.black),
+        ("white", forbidden.white, state.forbidden.white),
     )
+    updates = tuple(
+        ForbiddenUpdate(color=color, coordinates=tuple(sorted(current - previous)))
+        for color, current, previous in changes
+        if current - previous
+    )
+    return forbidden, updates

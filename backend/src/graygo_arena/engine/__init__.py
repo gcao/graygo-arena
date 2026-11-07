@@ -3,6 +3,7 @@
 from graygo_arena.engine.board import Board, Cell
 from graygo_arena.engine.coordinates import Coordinate
 from graygo_arena.engine.moves import ForbiddenState, Move, PassMove, legal_moves, parse_move
+from graygo_arena.engine.repetition import RoundHistory, forbidden_after_round
 from graygo_arena.engine.resolution import (
     CaptureByColor,
     CapturedColor,
@@ -29,6 +30,8 @@ __all__ = [
     "Move",
     "PassMove",
     "PlacementEvent",
+    "RoundHistory",
+    "forbidden_after_round",
     "TurnResolution",
     "collect_group",
     "legal_moves",

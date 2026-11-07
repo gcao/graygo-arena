@@ -64,10 +64,24 @@ Choose a 9x9 board and 200-turn limit, Black human, and White
 graygo_nfsp_experimental. Create the game, press Start, select an empty point
 to seal the move. The backend resolves it after the computer move is ready.
 
-The arena's existing rules are retained: its single-mutual-pass ending,
-capture restrictions and lack of the training engine's two-round ko differ
-from the checkpoint's training rules. This demo tests the interface and allows
-experimental play; its results are not training-engine strength measurements.
+The backend uses full-group liberties (including collision-created gray stones),
+captures before suicide removal, two consecutive mutual-pass rounds, accumulated
+no-change restrictions, and non-reverting two-round ko. Ordinary captures leave
+captured points playable unless a no-change or repetition restriction applies.
+Experimental arena games are not controlled training-strength measurements.
+
+For an existing database created before this restriction correction, stop the
+backend and rebuild active games' forbidden sets from their resolved history:
+
+```sh
+cd backend
+PYTHONPATH=src .venv/bin/python -m graygo_arena.persistence.repair_forbidden \
+  --database /path/to/arena.db --backup /path/to/private-restriction-backup.json --apply
+```
+
+Omit `--apply` for a read-only preview. The backup is created with mode 0600.
+Boards, resolved moves, captures and transcripts are preserved. Only forbidden
+sets and pending moves made illegal by the corrected restrictions are repaired.
 
 ## OpenAI Credentials
 

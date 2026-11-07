@@ -58,9 +58,25 @@ Black and white maintain separate forbidden sets. After any round whose resolved
 stone board is unchanged, add each non-pass placement to that player's existing
 set. Thus A's suicidal `x`, followed by suicidal `y` for A and `z` for B, leaves
 A forbidden at `{x, y}` and B at `{z}`. A PASS/PASS round preserves both sets.
-Pass itself is always allowed. Prior no-change restrictions are released when
-the stone board changes; a counter or restriction-set change alone does not
-count as a stone-board change.
+Pass itself is always allowed. Prior restrictions are released when the stone
+board changes to a position not found in the two-round history; a counter or
+restriction-set change alone does not count as a stone-board change.
+
+## Repetition and ordinary captures
+
+Ordinary captures do not themselves forbid the captured points. Keep the last
+two resolved rounds as `(pre_board_key, black_move, white_move)`. After resolution,
+compare the resulting stone board with those saved pre-round boards. For every
+match, forbid the recorded black and white placements for their respective
+players, retaining existing restrictions. Never forbid PASS, and never revert
+the completed round. A board change that matches neither saved board clears the
+prior restrictions.
+
+A collision-created gray stone joins its entire connected gray group before
+liberties are checked, including connections across either toroidal seam. It
+survives if that group has a liberty anywhere, even if the new point and its
+immediate gray neighbors have none individually. A previously captured black or
+white stone at the point must not prevent a later legal gray collision there.
 
 ## Captures before suicide
 

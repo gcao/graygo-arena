@@ -185,7 +185,7 @@ def test_both_remaining_dead_played_groups_are_removed_simultaneously() -> None:
     assert sum(len(capture.coordinates) for capture in resolution.captures) == 9
 
 
-def test_capture_removes_zero_liberty_gray_group_and_forbids_both_colors() -> None:
+def test_capture_removes_gray_group_without_forbidding_ordinary_capture_points() -> None:
     state = GameState(
         board=Board.from_key("+++++++/+WWG+++/+BWBBB+/+BGGWW+/++WBBW+/+++GBB+/+++WW++")
     )
@@ -201,30 +201,16 @@ def test_capture_removes_zero_liberty_gray_group_and_forbids_both_colors() -> No
         "d3",
         "d4",
     )
-    assert [
-        (update.color, tuple(c.to_label() for c in update.coordinates))
-        for update in resolution.forbidden_updates
-    ] == [
-        ("black", ("d3", "d4")),
-        ("white", ("d3", "d4")),
-    ]
-    assert Coordinate.parse("d3", size=7) in resolution.post_state.forbidden.black
-    assert Coordinate.parse("d4", size=7) in resolution.post_state.forbidden.black
-    assert Coordinate.parse("d3", size=7) in resolution.post_state.forbidden.white
-    assert Coordinate.parse("d4", size=7) in resolution.post_state.forbidden.white
+    assert resolution.forbidden_updates == ()
+    assert resolution.post_state.forbidden == ForbiddenState()
 
 
-def test_capture_creates_color_specific_forbidden_update() -> None:
+def test_ordinary_capture_does_not_create_a_forbidden_update() -> None:
     state = GameState(board=Board.from_key("+B+/BW+/+B+"))
-
     resolution = resolve_turn(state, move("b3", size=3), PassMove())
-
-    assert resolution.forbidden_updates[0].color == "white"
-    assert tuple(
-        coordinate.to_label() for coordinate in resolution.forbidden_updates[0].coordinates
-    ) == ("b2",)
-    assert Coordinate.parse("b2", size=3) in resolution.post_state.forbidden.white
-    assert Coordinate.parse("b2", size=3) not in resolution.post_state.forbidden.black
+    assert resolution.post_state.board.get(Coordinate.parse("b2", 3)) == "+"
+    assert resolution.forbidden_updates == ()
+    assert resolution.post_state.forbidden == ForbiddenState()
 
 
 def test_forbidden_point_blocks_only_matching_color() -> None:

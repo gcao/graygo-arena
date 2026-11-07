@@ -39,29 +39,56 @@
     "name": "toroidal_capture",
     "size": 3,
     "pre_board_key": "+B+/BW+/+B+",
-    "forbidden": {"black": [], "white": []},
+    "forbidden": {
+      "black": [],
+      "white": []
+    },
     "double_pass_count": 0,
     "black_move": "b3",
     "white_move": "PASS",
     "post_board_key": "+B+/B+B/+B+",
     "expected_events": [
-      {"type": "placement", "color": "black", "coordinate": "b3"},
-      {"type": "capture", "color": "white", "coordinates": ["b2"]},
-      {"type": "forbidden_update", "color": "white", "coordinates": ["b2"]}
+      {
+        "type": "placement",
+        "color": "black",
+        "coordinate": "b3"
+      },
+      {
+        "type": "capture",
+        "color": "white",
+        "coordinates": [
+          "b2"
+        ]
+      }
     ]
   },
   {
     "name": "forbidden_point_update",
-    "size": 3,
-    "pre_board_key": "+B+/BW+/+B+",
-    "forbidden": {"black": [], "white": []},
+    "size": 5,
+    "pre_board_key": "+++++/++W++/+W+W+/++W++/+++++",
+    "forbidden": {
+      "black": [],
+      "white": []
+    },
     "double_pass_count": 0,
-    "black_move": "b3",
+    "black_move": "c3",
     "white_move": "PASS",
-    "post_board_key": "+B+/B+B/+B+",
+    "post_board_key": "+++++/++W++/+W+W+/++W++/+++++",
     "expected_events": [
-      {"type": "capture", "color": "white", "coordinates": ["b2"]},
-      {"type": "forbidden_update", "color": "white", "coordinates": ["b2"]}
+      {
+        "type": "capture",
+        "color": "black",
+        "coordinates": [
+          "c3"
+        ]
+      },
+      {
+        "type": "forbidden_update",
+        "color": "black",
+        "coordinates": [
+          "c3"
+        ]
+      }
     ]
   },
   {

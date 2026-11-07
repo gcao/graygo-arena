@@ -30,6 +30,7 @@ from graygo_arena.engine import (
     ForbiddenUpdate,
     GameState,
     PlacementEvent,
+    RoundHistory,
     TurnResolution,
 )
 from graygo_arena.engine.moves import SeatColor
@@ -555,6 +556,22 @@ def _agent_call_from_row(row: sqlite3.Row) -> AgentCallRecord:
 def _resolution_json(resolution: TurnResolution) -> str:
     return json.dumps(
         {
+            "post_forbidden": {
+                "black": [
+                    point.to_label() for point in sorted(resolution.post_state.forbidden.black)
+                ],
+                "white": [
+                    point.to_label() for point in sorted(resolution.post_state.forbidden.white)
+                ],
+            },
+            "history": [
+                {
+                    "pre_board_key": round_.pre_board_key,
+                    "black_move": round_.black_move,
+                    "white_move": round_.white_move,
+                }
+                for round_ in resolution.post_state.history
+            ],
             "placement_events": [
                 {
                     "event_type": event.event_type,
@@ -638,6 +655,16 @@ def _resolution_from_json(
             for coordinate in update.coordinates
         ),
     )
+    if "post_forbidden" in payload:
+        full = cast(dict[str, list[str]], payload["post_forbidden"])
+        forbidden = ForbiddenState(
+            black=frozenset(Coordinate.parse(label, post_board_size) for label in full["black"]),
+            white=frozenset(Coordinate.parse(label, post_board_size) for label in full["white"]),
+        )
+    history = tuple(
+        RoundHistory(round_["pre_board_key"], round_["black_move"], round_["white_move"])
+        for round_ in cast(list[dict[str, str]], payload.get("history", []))
+    )
     post_board = Board.from_key(post_board_key)
     double_pass_count = cast(int, payload["double_pass_count"])
     return TurnResolution(
@@ -653,6 +680,7 @@ def _resolution_from_json(
             forbidden=forbidden,
             double_pass_count=double_pass_count,
             turn_index=turn_index + 1,
+            history=history,
         ),
         double_pass_count=double_pass_count,
         game_finished=cast(bool, payload["game_finished"]),

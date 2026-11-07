@@ -12,7 +12,7 @@
 - [x] **ENG-03**: System resolves simultaneous Black and White moves from the same pre-turn board without exposing either pending move to the other seat.
 - [x] **ENG-04**: System converts same-point simultaneous placements into gray collision points according to the Gray Go ruleset.
 - [x] **ENG-05**: System computes toroidal neighbors, groups, and liberties consistently for all board positions.
-- [x] **ENG-06**: System applies two-stage captures and forbidden-point updates deterministically.
+- [x] **ENG-06**: System applies two-stage full-group captures, accumulated no-change restrictions and non-reverting two-round ko deterministically; ordinary captures do not forbid their points.
 - [x] **ENG-07**: System ends after two consecutive simultaneous PASS/PASS rounds, resets the streak on any placement, and returns Chinese area scores, winner, and margin when a game ends, assuming all remaining stones are alive and dividing gray's points between the players.
 - [x] **ENG-08**: Automated tests cover legal move validation, toroidal liberties, collision-to-gray behavior, captures, forbidden points, pass handling, and scoring.
 

@@ -28,6 +28,7 @@ from graygo_arena.application.models import (
 from graygo_arena.application.prompt_builder import build_move_request
 from graygo_arena.engine import Board, ForbiddenState, GameState, PassMove, legal_moves, parse_move
 from graygo_arena.engine.moves import MoveLike, SeatColor
+from graygo_arena.engine.repetition import RoundHistory
 from graygo_arena.engine.resolution import resolve_turn
 
 type IdFactory = Callable[[str], str]
@@ -445,6 +446,10 @@ class GameOrchestrator:
                 double_pass_count=game.double_pass_count,
                 turn_index=game.current_turn,
                 ruleset=game.ruleset,
+                history=tuple(
+                    RoundHistory(turn.pre_board_key, turn.black_move, turn.white_move)
+                    for turn in self._repository.list_turns(game.id)[-2:]
+                ),
             ),
             black_move,
             white_move,
